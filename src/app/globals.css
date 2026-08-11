@@ -1,0 +1,47 @@
+@import "tailwindcss";
+
+@theme {
+  /* CLAUDE.md 색 규칙 */
+  --color-sea: #4fc3e8; /* 배경 하늘색 */
+  --color-deep: #1ea7d4; /* 진한 파랑 */
+  --color-ink: #1a1a1a; /* 글자 검정 */
+  --color-skin: #f7c4a8; /* 살색 */
+  --color-leaf: #a8e063; /* 포인트 연두 */
+  --color-sun: #ffd64f; /* 포인트 노랑 */
+  --color-coral: #ff6b5a; /* 포인트 빨강 */
+  --color-blossom: #ff8fb1; /* 포인트 분홍 */
+
+  --font-sans: var(--font-noto-sans-kr), system-ui, sans-serif;
+}
+
+/* 다크모드는 쓰지 않는다 (CLAUDE.md 금지 항목). prefers-color-scheme 블록 없음. */
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  height: 100dvh;
+  overflow: hidden;
+  background: var(--color-sea);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* safe-area 유틸 */
+@utility pt-safe {
+  padding-top: env(safe-area-inset-top);
+}
+
+@utility pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+@utility px-safe {
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
