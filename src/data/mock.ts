@@ -1,6 +1,6 @@
 import { PLACES } from "@/data/places";
 import { evaluateCondition } from "@/lib/condition";
-import type { Condition, Observation, PlaceStatus } from "@/types/condition";
+import type { Observation, PlaceReading, PlaceStatus } from "@/types/condition";
 import type { Place } from "@/types/place";
 
 /**
@@ -123,9 +123,13 @@ export function getMockObservation(place: Place): Observation {
   };
 }
 
-/** 예시 데이터 기준 17곳의 상태. isMock은 항상 true다. */
-export function buildMockConditions(): Condition[] {
-  return PLACES.map((place) =>
-    evaluateCondition(place, getMockObservation(place), true),
-  );
+/** 예시 데이터 기준 17곳의 판단 결과와 근거값. isMock은 항상 true다. */
+export function buildMockReadings(): PlaceReading[] {
+  return PLACES.map((place) => {
+    const observation = getMockObservation(place);
+    return {
+      condition: evaluateCondition(place, observation, true),
+      observation,
+    };
+  });
 }

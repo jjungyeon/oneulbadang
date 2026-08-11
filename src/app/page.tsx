@@ -1,9 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 
-import { buildMockConditions } from "@/data/mock";
+import PlaceSheet from "@/components/PlaceSheet";
+import { buildMockReadings } from "@/data/mock";
+import { SHEET_MAX_HEIGHT_RATIO } from "@/lib/layout";
 import type { Place } from "@/types/place";
 
 // Leaflet은 window에 의존하므로 서버에서 렌더하지 않는다.
@@ -13,33 +15,49 @@ const JejuMap = dynamic(() => import("@/components/JejuMap"), {
 });
 
 export default function Home() {
-  const conditions = useMemo(() => buildMockConditions(), []);
+  const readings = useMemo(() => buildMockReadings(), []);
+  const conditions = useMemo(() => readings.map((r) => r.condition), [readings]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [viewportHeight, setViewportHeight] = useState(0);
 
-  const selected = conditions.find((c) => c.place.id === selectedId) ?? null;
-  const anyMock = conditions.some((c) => c.isMock);
+  useEffect(() => {
+    const update = () => setViewportHeight(window.innerHeight);
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
 
-  const handleSelect = (place: Place) => setSelectedId(place.id);
+  const selected =
+    readings.find((r) => r.condition.place.id === selectedId) ?? null;
+  const anyMock = readings.some((r) => r.condition.isMock);
+
+  // 시트가 가리는 높이만큼 지도를 위로 밀어 올린다.
+  const bottomInset = selected
+    ? Math.round(viewportHeight * SHEET_MAX_HEIGHT_RATIO)
+    : 0;
+
+  const handleSelect = useCallback((place: Place) => setSelectedId(place.id), []);
+  const handleClose = useCallback(() => setSelectedId(null), []);
 
   return (
     <main className="relative h-dvh w-full overflow-hidden">
-      <JejuMap conditions={conditions} onSelectPlace={handleSelect} />
+      <JejuMap
+        conditions={conditions}
+        onSelectPlace={handleSelect}
+        bottomInset={bottomInset}
+        onBackgroundClick={handleClose}
+      />
 
-      {/* 임시 확인용. Task 5에서 바텀시트로 교체한다. */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 z-[1000] flex flex-col items-center gap-2 pt-safe">
-        <p className="mt-3 rounded-full bg-white px-5 py-3 text-center text-base font-bold text-ink shadow-sm">
-          {selected
-            ? `${selected.place.name} · ${selected.message}`
-            : "마커를 눌러보세요"}
-        </p>
-
-        {/* FN-09. 실데이터가 아니면 화면에 계속 보인다. */}
-        {anyMock && (
-          <p className="rounded-full bg-sun px-4 py-2 text-sm font-bold text-ink">
+      {/* FN-09. 실데이터가 아니면 화면에 계속 보인다. */}
+      {anyMock && (
+        <div className="pointer-events-none absolute inset-x-0 top-0 z-[1000] flex justify-center pt-safe">
+          <p className="mt-3 rounded-full bg-sun px-4 py-2 text-[13px] font-bold text-ink shadow-sm">
             예시 데이터입니다
           </p>
-        )}
-      </div>
+        </div>
+      )}
+
+      <PlaceSheet reading={selected} onClose={handleClose} />
     </main>
   );
 }

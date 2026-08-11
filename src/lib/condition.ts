@@ -21,8 +21,9 @@ export const THRESHOLD = {
 export const STATUS_MESSAGE: Record<PlaceStatus, string> = {
   RAIN: "비가 오고 있어요",
   WINDY: "바람이 꽤 불어요",
-  COLD: "물이 아직 차요",
-  HOT: "물이 뜨끈해요",
+  COLD: "물에 들어가기엔 조금 추워요",
+  // "뜨겁다"로 쓰면 들어가지 말라는 신호로 읽힌다.
+  HOT: "따뜻한 바다예요",
   LOW_TIDE: "물이 많이 빠졌어요",
   SWIMMING: "지금 물놀이하기 좋아요",
 };

@@ -52,3 +52,12 @@ export interface Observation {
   water: WaterTemperature;
   weather: WeatherData;
 }
+
+/**
+ * 한 장소의 판단 결과와 그 근거가 된 관측값.
+ * 지도는 condition만 쓰고, 바텀시트는 숫자를 보여줘야 해서 observation까지 쓴다.
+ */
+export interface PlaceReading {
+  condition: Condition;
+  observation: Observation;
+}
