@@ -26,13 +26,13 @@ interface PlaceSheetProps {
  * 물 높이는 상태에 따라 달라진다. 물이 많이 빠지면 아래로 내려간다.
  */
 function SeaBand({ status, children }: { status: PlaceStatus; children: ReactNode }) {
-  const waterY = status === "LOW_TIDE" ? 152 : status === "COLD" ? 116 : 132;
+  const waterY = status === "LOW_TIDE" ? 166 : status === "COLD" ? 126 : 144;
 
   return (
-    <div className="relative -mx-6 h-[186px] overflow-hidden bg-sea">
+    <div className="relative -mx-6 h-[200px] overflow-hidden bg-sea">
       <svg
         className="absolute inset-0 h-full w-full"
-        viewBox="0 0 390 186"
+        viewBox="0 0 390 200"
         preserveAspectRatio="xMidYMax slice"
         aria-hidden="true"
       >
@@ -49,17 +49,18 @@ function SeaBand({ status, children }: { status: PlaceStatus; children: ReactNod
 
         {/* 진한 파랑 물 */}
         <path
-          d={`M0 ${waterY + 16} Q98 ${waterY + 4} 195 ${waterY + 14} T390 ${waterY + 12} L390 186 L0 186 Z`}
+          d={`M0 ${waterY + 18} Q98 ${waterY + 6} 195 ${waterY + 16} T390 ${waterY + 14} L390 200 L0 200 Z`}
           fill="#1EA7D4"
         />
         {/* 경계의 굵은 흰 파도 띠 */}
         <path
-          d={`M0 ${waterY} Q98 ${waterY - 14} 195 ${waterY - 2} T390 ${waterY - 6} L390 ${waterY + 16} Q292 ${waterY + 6} 195 ${waterY + 16} T0 ${waterY + 18} Z`}
+          d={`M0 ${waterY} Q98 ${waterY - 15} 195 ${waterY - 2} T390 ${waterY - 7} L390 ${waterY + 18} Q292 ${waterY + 7} 195 ${waterY + 18} T0 ${waterY + 20} Z`}
           fill="#FFFFFF"
         />
       </svg>
 
-      <div className="absolute inset-0 grid place-items-center">{children}</div>
+      {/* 인물이 프레임을 꽉 채우고 아래가 잘리도록 바닥에 붙인다 */}
+      <div className="absolute inset-x-0 bottom-0 flex justify-center">{children}</div>
     </div>
   );
 }
