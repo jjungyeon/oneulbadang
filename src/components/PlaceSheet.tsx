@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { AnimatePresence, motion } from "motion/react";
 
 import SeaCharacter from "@/components/SeaCharacter";
@@ -13,11 +13,55 @@ import {
   waterLabel,
   windLabel,
 } from "@/lib/labels";
-import type { PlaceReading } from "@/types/condition";
+import type { PlaceReading, PlaceStatus } from "@/types/condition";
 
 interface PlaceSheetProps {
   reading: PlaceReading | null;
   onClose: () => void;
+}
+
+/**
+ * 캐릭터가 서는 배너. ref/ref_01.png의 구성 그대로다 —
+ * 하늘색 위, 굵은 흰 파도 띠, 그 아래 진한 파랑 물. 배경에 흰 점과 짧은 물결선을 흩뿌린다.
+ * 물 높이는 상태에 따라 달라진다. 물이 많이 빠지면 아래로 내려간다.
+ */
+function SeaBand({ status, children }: { status: PlaceStatus; children: ReactNode }) {
+  const waterY = status === "LOW_TIDE" ? 152 : status === "COLD" ? 116 : 132;
+
+  return (
+    <div className="relative -mx-6 h-[186px] overflow-hidden bg-sea">
+      <svg
+        className="absolute inset-0 h-full w-full"
+        viewBox="0 0 390 186"
+        preserveAspectRatio="xMidYMax slice"
+        aria-hidden="true"
+      >
+        {/* 배경에 흩뿌린 작은 흰 점 */}
+        <circle cx="42" cy="34" r="4" fill="#FFFFFF" opacity="0.75" />
+        <circle cx="66" cy="62" r="2.6" fill="#FFFFFF" opacity="0.6" />
+        <circle cx="330" cy="28" r="3.4" fill="#FFFFFF" opacity="0.7" />
+        <circle cx="356" cy="58" r="2.4" fill="#FFFFFF" opacity="0.55" />
+        <circle cx="300" cy="86" r="2.8" fill="#FFFFFF" opacity="0.5" />
+
+        {/* 짧은 물결선. stroke 없이 채운 리본으로 그린다. */}
+        <path d="M26 88 q7 -7 14 0 t14 0 v3.6 q-7 7 -14 0 t-14 0 z" fill="#1EA7D4" opacity="0.5" />
+        <path d="M330 106 q7 -7 14 0 t14 0 v3.6 q-7 7 -14 0 t-14 0 z" fill="#1EA7D4" opacity="0.45" />
+
+        {/* 진한 파랑 물 */}
+        <path
+          d={`M0 ${waterY + 16} Q98 ${waterY + 4} 195 ${waterY + 14} T390 ${waterY + 12} L390 186 L0 186 Z`}
+          fill="#1EA7D4"
+        />
+        {/* 경계의 굵은 흰 파도 띠 */}
+        <path
+          d={`M0 ${waterY} Q98 ${waterY - 14} 195 ${waterY - 2} T390 ${waterY - 6} L390 ${waterY + 16} Q292 ${waterY + 6} 195 ${waterY + 16} T0 ${waterY + 18} Z`}
+          fill="#FFFFFF"
+        />
+      </svg>
+
+      <div className="absolute inset-0 grid place-items-center">{children}</div>
+    </div>
+  );
 }
 
 /** 카드 하나. FN-06에 따라 상태 문구가 숫자보다 크다. */
@@ -31,7 +75,7 @@ function InfoCard({
   value?: string;
 }) {
   return (
-    <div className="rounded-2xl bg-sea/10 px-4 py-3">
+    <div className="rounded-2xl bg-mist px-4 py-3">
       <p className="text-[12px] font-medium text-ink/60">{label}</p>
       <p className="mt-1 text-[15px] font-bold text-ink">{status}</p>
       {value && <p className="text-[13px] text-ink/60">{value}</p>}
@@ -93,14 +137,16 @@ export default function PlaceSheet({ reading, onClose }: PlaceSheetProps) {
                   type="button"
                   aria-label="닫기"
                   onClick={onClose}
-                  className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-sea/10 text-[18px] font-bold text-ink"
+                  className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-mist text-[18px] font-bold text-ink"
                 >
                   ✕
                 </button>
               </div>
 
-              <div className="my-3 grid place-items-center">
-                <SeaCharacter status={reading.condition.status} />
+              <div className="my-4">
+                <SeaBand status={reading.condition.status}>
+                  <SeaCharacter status={reading.condition.status} />
+                </SeaBand>
               </div>
 
               <div className="grid grid-cols-2 gap-2">
@@ -138,13 +184,13 @@ export default function PlaceSheet({ reading, onClose }: PlaceSheetProps) {
                 type="button"
                 onClick={() => setDetailOpen((v) => !v)}
                 aria-expanded={detailOpen}
-                className="mt-3 flex h-11 w-full items-center justify-center rounded-full bg-sea/10 text-[15px] font-bold text-ink"
+                className="mt-3 flex h-11 w-full items-center justify-center rounded-full bg-mist text-[15px] font-bold text-ink"
               >
                 {detailOpen ? "접기" : "자세히 보기"}
               </button>
 
               {detailOpen && (
-                <div className="mt-3 rounded-2xl bg-sea/[0.07] px-4 py-4 text-[13px] leading-relaxed text-ink/80">
+                <div className="mt-3 rounded-2xl bg-mist px-4 py-4 text-[13px] leading-relaxed text-ink/80">
                   <dl className="space-y-1.5">
                     <div className="flex justify-between gap-3">
                       <dt>조위</dt>

@@ -26,14 +26,18 @@ const JEJU_BOUNDS = L.latLngBounds(
  * 바깥 44×44는 터치 영역(NF-05), 안쪽 원이 눈에 보이는 점이다.
  */
 function createMarkerIcon(swimming: boolean) {
-  const fill = swimming ? "bg-deep" : "bg-mute";
+  const fill = swimming ? "#1EA7D4" : "#9BA7B0";
   return L.divIcon({
     className: "",
+    // 물방울 모양. 뾰족한 끝이 아래를 향해 실제 위치를 가리킨다.
     html: `<div class="grid h-11 w-11 place-items-center">
-             <span class="block h-5 w-5 rounded-full ${fill} shadow-sm"></span>
+             <svg width="22" height="28" viewBox="0 0 22 28" aria-hidden="true">
+               <path d="M11 28 C11 28 0 16.5 0 10.2 A11 11 0 1 1 22 10.2 C22 16.5 11 28 11 28 Z" fill="${fill}"/>
+               <circle cx="7.6" cy="8" r="3" fill="#FFFFFF" opacity="0.5"/>
+             </svg>
            </div>`,
     iconSize: [44, 44],
-    iconAnchor: [22, 22],
+    iconAnchor: [22, 36],
   });
 }
 
@@ -135,10 +139,11 @@ export default function JejuMap({
       attributionControl
       className="h-full w-full bg-sea"
     >
+      {/* 바다가 파란 타일을 쓴다. CARTO Positron은 바다가 회색이라 여름 느낌이 죽는다. */}
       <TileLayer
-        url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
-        maxZoom={20}
+        url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        maxZoom={19}
       />
       <FitJeju bottomInset={bottomInset} />
       <MapBackgroundClick onClick={onBackgroundClick} />
