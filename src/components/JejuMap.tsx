@@ -6,6 +6,7 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
 import { PLACES } from "@/data/places";
+import type { Condition } from "@/types/condition";
 import type { Place } from "@/types/place";
 
 const JEJU_CENTER: [number, number] = [33.38, 126.55];
@@ -17,18 +18,24 @@ const JEJU_BOUNDS = L.latLngBounds(
 );
 
 /**
- * 마커. 이 단계에서는 17곳 모두 같은 모양이다.
- * FN-02(좋은 곳/나머지 색 구분)는 Task 7에서 붙인다.
+ * 마커 두 가지. FN-02에 따라 두 갈래로만 나눈다.
+ * 물놀이 좋은 곳(SWIMMING)은 색이 찬 마커, 나머지는 회색 마커다.
  * 바깥 44×44는 터치 영역(NF-05), 안쪽 원이 눈에 보이는 점이다.
  */
-const markerIcon = L.divIcon({
-  className: "",
-  html: `<div class="grid h-11 w-11 place-items-center">
-           <span class="block h-5 w-5 rounded-full bg-deep shadow-sm"></span>
-         </div>`,
-  iconSize: [44, 44],
-  iconAnchor: [22, 22],
-});
+function createMarkerIcon(swimming: boolean) {
+  const fill = swimming ? "bg-deep" : "bg-mute";
+  return L.divIcon({
+    className: "",
+    html: `<div class="grid h-11 w-11 place-items-center">
+             <span class="block h-5 w-5 rounded-full ${fill} shadow-sm"></span>
+           </div>`,
+    iconSize: [44, 44],
+    iconAnchor: [22, 22],
+  });
+}
+
+const SWIMMING_ICON = createMarkerIcon(true);
+const OTHER_ICON = createMarkerIcon(false);
 
 /**
  * 마운트 후 실제 화면 크기에 맞춰 제주 전체를 담는다. 마커 반지름 + 여백만큼 패딩을 준다.
@@ -65,21 +72,27 @@ function FitJeju() {
 }
 
 interface JejuMapProps {
+  conditions: Condition[];
   onSelectPlace: (place: Place) => void;
 }
 
-export default function JejuMap({ onSelectPlace }: JejuMapProps) {
+export default function JejuMap({ conditions, onSelectPlace }: JejuMapProps) {
   const markers = useMemo(
     () =>
-      PLACES.map((place) => (
-        <Marker
-          key={place.id}
-          position={[place.lat, place.lng]}
-          icon={markerIcon}
-          eventHandlers={{ click: () => onSelectPlace(place) }}
-        />
-      )),
-    [onSelectPlace],
+      conditions.map(({ place, status }) => {
+        const swimming = status === "SWIMMING";
+        return (
+          <Marker
+            key={place.id}
+            position={[place.lat, place.lng]}
+            icon={swimming ? SWIMMING_ICON : OTHER_ICON}
+            // 마커가 겹치는 구간에서는 색이 찬 쪽이 위로 오게 한다.
+            zIndexOffset={swimming ? 1000 : 0}
+            eventHandlers={{ click: () => onSelectPlace(place) }}
+          />
+        );
+      }),
+    [conditions, onSelectPlace],
   );
 
   return (
