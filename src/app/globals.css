@@ -35,6 +35,118 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* 캐릭터 움직임. canvas 없이 CSS만 쓴다. */
+@keyframes badang-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+@keyframes badang-float {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-2px) rotate(2deg);
+  }
+}
+
+@keyframes badang-shiver {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-1.3px);
+  }
+  75% {
+    transform: translateX(1.3px);
+  }
+}
+
+@keyframes badang-lean {
+  0%,
+  100% {
+    transform: rotate(-9deg);
+  }
+  50% {
+    transform: rotate(-4deg);
+  }
+}
+
+@keyframes badang-drift {
+  0% {
+    transform: translateX(-10px);
+    opacity: 0;
+  }
+  35% {
+    opacity: 0.9;
+  }
+  100% {
+    transform: translateX(14px);
+    opacity: 0;
+  }
+}
+
+@keyframes badang-drop {
+  0% {
+    transform: translateY(-16px);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.95;
+  }
+  100% {
+    transform: translateY(30px);
+    opacity: 0;
+  }
+}
+
+@keyframes badang-settle {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(1.5px);
+  }
+}
+
+/* SVG 그룹은 기준점을 잡아 줘야 회전이 제자리에서 돈다. */
+.badang-anim {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .badang-bob {
+    animation: badang-bob 2.4s ease-in-out infinite;
+  }
+  .badang-float {
+    animation: badang-float 4s ease-in-out infinite;
+  }
+  .badang-shiver {
+    animation: badang-shiver 0.28s ease-in-out infinite;
+  }
+  .badang-lean {
+    animation: badang-lean 1.8s ease-in-out infinite;
+  }
+  .badang-settle {
+    animation: badang-settle 3.4s ease-in-out infinite;
+  }
+  .badang-drift {
+    animation: badang-drift 2.2s linear infinite;
+  }
+  .badang-drop {
+    animation: badang-drop 1.1s linear infinite;
+  }
+}
+
 /* safe-area 유틸 */
 @utility pt-safe {
   padding-top: env(safe-area-inset-top);

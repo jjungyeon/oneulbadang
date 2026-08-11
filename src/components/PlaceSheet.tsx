@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 
+import SeaCharacter from "@/components/SeaCharacter";
 import { TIDE_LABEL } from "@/lib/condition";
 import { SHEET_MAX_HEIGHT } from "@/lib/layout";
 import {
@@ -98,9 +99,8 @@ export default function PlaceSheet({ reading, onClose }: PlaceSheetProps) {
                 </button>
               </div>
 
-              {/* 캐릭터 자리. Task 6에서 채운다. */}
-              <div className="my-4 grid place-items-center">
-                <div className="h-24 w-24 rounded-full bg-sea/15" />
+              <div className="my-3 grid place-items-center">
+                <SeaCharacter status={reading.condition.status} />
               </div>
 
               <div className="grid grid-cols-2 gap-2">
