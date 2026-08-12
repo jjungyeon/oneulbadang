@@ -7,7 +7,7 @@ import PlaceSearch from "@/components/PlaceSearch";
 import PlaceSheet from "@/components/PlaceSheet";
 import { PLACES } from "@/data/places";
 import { buildMockReadings } from "@/data/mock";
-import { SHEET_MAX_HEIGHT_RATIO } from "@/lib/layout";
+import { SHEET_RATIO, type SheetSize } from "@/lib/layout";
 import type { Place } from "@/types/place";
 
 // Leaflet은 window에 의존하므로 서버에서 렌더하지 않는다.
@@ -20,6 +20,7 @@ export default function Home() {
   const readings = useMemo(() => buildMockReadings(), []);
   const conditions = useMemo(() => readings.map((r) => r.condition), [readings]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [sheetSize, setSheetSize] = useState<SheetSize>("full");
   const [focus, setFocus] = useState<Place | null>(null);
   const [viewportHeight, setViewportHeight] = useState(0);
 
@@ -34,20 +35,22 @@ export default function Home() {
     readings.find((r) => r.condition.place.id === selectedId) ?? null;
   const anyMock = readings.some((r) => r.condition.isMock);
 
-  // 시트가 가리는 높이만큼 지도를 위로 밀어 올린다.
-  const bottomInset = selected
-    ? Math.round(viewportHeight * SHEET_MAX_HEIGHT_RATIO)
-    : 0;
+  const sheetHeight = Math.round(viewportHeight * SHEET_RATIO[sheetSize]);
+  // 시트가 가리는 높이만큼 지도를 위로 밀어 올린다. 단계가 바뀌면 섬도 다시 정렬된다.
+  const bottomInset = selected ? sheetHeight : 0;
 
   // 마커를 직접 누른 경우에는 검색으로 맞춰 둔 위치를 풀고 제주 전체로 돌아간다.
+  // 정보를 다 보여주는 게 목적이라 '크게'로 연다.
   const handleSelectMarker = useCallback((place: Place) => {
     setFocus(null);
+    setSheetSize("full");
     setSelectedId(place.id);
   }, []);
 
   // 검색 결과를 고르면 그 위치로 지도를 옮기고 시트를 연다.
   const handleSelectSearch = useCallback((place: Place) => {
     setFocus(place);
+    setSheetSize("full");
     setSelectedId(place.id);
   }, []);
 
@@ -80,7 +83,13 @@ export default function Home() {
         )}
       </div>
 
-      <PlaceSheet reading={selected} onClose={handleClose} />
+      <PlaceSheet
+        reading={selected}
+        size={sheetSize}
+        height={sheetHeight}
+        onResize={setSheetSize}
+        onClose={handleClose}
+      />
     </main>
   );
 }

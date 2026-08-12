@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 
 import SeaCharacter from "@/components/SeaCharacter";
-import { TIDE_LABEL } from "@/lib/condition";
-import { SHEET_MAX_HEIGHT } from "@/lib/layout";
+import { TIDE_LABEL, tideRatio } from "@/lib/condition";
+import type { SheetSize } from "@/lib/layout";
 import {
   TREND_LABEL,
   skyLabel,
@@ -17,8 +17,16 @@ import type { PlaceReading } from "@/types/condition";
 
 interface PlaceSheetProps {
   reading: PlaceReading | null;
+  /** 시트 높이 단계 */
+  size: SheetSize;
+  /** 픽셀로 환산한 현재 높이 */
+  height: number;
+  onResize: (size: SheetSize) => void;
   onClose: () => void;
 }
+
+/** 쓸어올린 것으로 볼 최소 이동 거리(px). 이보다 작으면 그냥 누른 것으로 본다. */
+const SWIPE_THRESHOLD = 30;
 
 /** 카드 하나. FN-06에 따라 상태 문구가 숫자보다 크다. */
 function InfoCard({
@@ -39,7 +47,13 @@ function InfoCard({
   );
 }
 
-export default function PlaceSheet({ reading, onClose }: PlaceSheetProps) {
+export default function PlaceSheet({
+  reading,
+  size,
+  height,
+  onResize,
+  onClose,
+}: PlaceSheetProps) {
   const [detailOpen, setDetailOpen] = useState(false);
   const [shownPlaceId, setShownPlaceId] = useState(reading?.condition.place.id);
 
@@ -49,6 +63,50 @@ export default function PlaceSheet({ reading, onClose }: PlaceSheetProps) {
     setShownPlaceId(reading?.condition.place.id);
     setDetailOpen(false);
   }
+
+  /**
+   * 헤더를 누르면 크게 ↔ 작게, 쓸어올리면 크게, 쓸어내리면 작게.
+   *
+   * 위로 쓸면 손가락이 헤더 밖 지도 위에서 떨어지는데, 그 pointerup은 유실된다.
+   * 그래서 손을 뗄 때가 아니라 문턱을 넘는 순간 판정한다.
+   * 닫기 버튼 위에서는 포인터를 붙잡지 않는다. 붙잡으면 그 버튼이 클릭을 못 받는다.
+   */
+  const gesture = useRef<{ startY: number; handled: boolean } | null>(null);
+
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if ((e.target as HTMLElement).closest("[data-sheet-ignore]")) return;
+    gesture.current = { startY: e.clientY, handled: false };
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+
+  // 손을 떼는 순간이 아니라 문턱을 넘는 순간 판정한다.
+  // 위로 쓸면 손가락이 지도 위에서 떨어지는데, 그 pointerup은 여기까지 오지 않는다.
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    const g = gesture.current;
+    if (!g || g.handled) return;
+    const moved = e.clientY - g.startY;
+    if (moved < -SWIPE_THRESHOLD) {
+      g.handled = true;
+      onResize("full");
+    } else if (moved > SWIPE_THRESHOLD) {
+      g.handled = true;
+      onResize("peek");
+    }
+  };
+
+  // 문턱을 넘지 않고 뗐으면 그냥 누른 것이다.
+  const handlePointerUp = () => {
+    const g = gesture.current;
+    gesture.current = null;
+    if (!g || g.handled) return;
+    onResize(size === "full" ? "peek" : "full");
+  };
+
+  const handleHandleKey = (e: React.KeyboardEvent) => {
+    if (e.key !== "Enter" && e.key !== " ") return;
+    e.preventDefault();
+    onResize(size === "full" ? "peek" : "full");
+  };
 
   useEffect(() => {
     if (!reading) return;
@@ -68,38 +126,59 @@ export default function PlaceSheet({ reading, onClose }: PlaceSheetProps) {
           /* 올라오는 transform은 이 요소가, 스크롤은 안쪽 div가 맡는다.
              둘을 한 요소에 걸면 합성 레이어와 둥근 모서리 클립이 얽혀 다루기 어려워진다. */
           className="absolute inset-x-0 bottom-0 z-[1200] flex flex-col overflow-hidden rounded-t-[28px] bg-white shadow-[0_-2px_16px_rgba(0,0,0,0.08)]"
-          style={{ maxHeight: SHEET_MAX_HEIGHT }}
-          initial={{ y: "100%" }}
-          animate={{ y: 0 }}
+          initial={{ y: "100%", height }}
+          animate={{ y: 0, height }}
           exit={{ y: "100%" }}
           transition={{ type: "spring", stiffness: 420, damping: 38 }}
         >
-          <div className="overflow-y-auto pb-safe">
-            <div className="px-6 pb-6 pt-3">
-              <div className="mx-auto h-1 w-10 rounded-full bg-ink/15" />
+          {/* 손잡이와 제목 줄이 높이 조절 손잡이 역할을 한다. */}
+          <div
+            className="shrink-0 cursor-pointer px-6 pt-3"
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+          >
+            <div
+              role="button"
+              tabIndex={0}
+              aria-label={size === "full" ? "시트 작게" : "시트 크게"}
+              aria-expanded={size === "full"}
+              onKeyDown={handleHandleKey}
+              className="mx-auto h-6 w-16 pt-2"
+            >
+              <div className="mx-auto h-1.5 w-10 rounded-full bg-ink/20" />
+            </div>
 
-              <div className="mt-4 flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <h2 className="truncate text-[26px] font-black leading-tight text-ink">
-                    {reading.condition.place.name}
-                  </h2>
-                  {/* NF-08. 장소명 다음으로 큰 글자이고 숫자보다 크다. */}
-                  <p className="mt-1 text-[20px] font-bold leading-snug text-deep">
-                    {reading.condition.message}
-                  </p>
-                </div>
-
-                <button
-                  type="button"
-                  aria-label="닫기"
-                  onClick={onClose}
-                  className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-mist text-[18px] font-bold text-ink"
-                >
-                  ✕
-                </button>
+            <div className="mt-2 flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <h2 className="truncate text-[26px] font-black leading-tight text-ink">
+                  {reading.condition.place.name}
+                </h2>
+                {/* NF-08. 장소명 다음으로 큰 글자이고 숫자보다 크다. */}
+                <p className="mt-1 text-[20px] font-bold leading-snug text-deep">
+                  {reading.condition.message}
+                </p>
               </div>
-              <div className="my-4">
-                <SeaCharacter status={reading.condition.status} />
+
+              <button
+                type="button"
+                aria-label="닫기"
+                data-sheet-ignore
+                onClick={onClose}
+                className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-mist text-[18px] font-bold text-ink"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+
+          <div className="min-h-0 flex-1 overflow-y-auto pb-safe">
+            <div className="px-6 pb-6">
+              <div className="mt-4">
+                <SeaCharacter
+                  status={reading.condition.status}
+                  tideRatio={tideRatio(reading.observation.tide)}
+                />
               </div>
 
               <div className="grid grid-cols-2 gap-2">

@@ -19,6 +19,9 @@ const TOP_INSET_BARE = 72; // 시트가 열려 검색창이 사라졌을 때
 /** 검색으로 고른 장소로 옮겨 갈 때의 배율. 이 배율이면 마커가 서로 떨어진다. */
 const FOCUS_ZOOM = 12;
 
+/** 시트가 아무리 커져도 지도에 남겨 두는 최소 세로 높이 */
+const MIN_MAP_HEIGHT = 96;
+
 /** 마커 17곳을 모두 감싸는 범위. 화면 폭이 320~430 어디든 전부 들어오게 하는 기준이 된다. */
 const JEJU_BOUNDS = L.latLngBounds(
   PLACES.map((p) => [p.lat, p.lng] as [number, number]),
@@ -90,9 +93,14 @@ function MapView({
         return;
       }
 
+      // 시트를 크게 열면 시트 높이가 화면의 88%까지 간다. 그대로 패딩을 주면
+      // 지도에 남는 세로가 0 이하가 되어 배율 계산이 무너진다. 최소 높이를 남긴다.
+      const usable = container.clientHeight - topInset - MIN_MAP_HEIGHT;
+      const bottomPad = Math.max(0, Math.min(36 + bottomInset, usable));
+
       map.fitBounds(JEJU_BOUNDS, {
         paddingTopLeft: [36, topInset],
-        paddingBottomRight: [36, 36 + bottomInset],
+        paddingBottomRight: [36, bottomPad],
         animate,
         duration: 0.35,
       });
