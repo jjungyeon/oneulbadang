@@ -7,6 +7,7 @@ import PlaceSearch from "@/components/PlaceSearch";
 import PlaceSheet from "@/components/PlaceSheet";
 import { PLACES } from "@/data/places";
 import { buildMockReadings } from "@/data/mock";
+import { getAllPlaceConditions } from "@/lib/conditions";
 import { SHEET_RATIO, type SheetSize } from "@/lib/layout";
 import type { Place } from "@/types/place";
 
@@ -17,8 +18,23 @@ const JejuMap = dynamic(() => import("@/components/JejuMap"), {
 });
 
 export default function Home() {
-  const readings = useMemo(() => buildMockReadings(), []);
-  const conditions = useMemo(() => readings.map((r) => r.condition), [readings]);
+  // 처음에는 예시 데이터로 그린다. 실제 값이 오면 갈아 끼운다.
+  // 실패하거나 키가 없으면 예시 데이터가 그대로 남는다(NF-03).
+  const [readings, setReadings] = useState(() => buildMockReadings());
+  const conditions = useMemo(
+    () => readings.map((r) => r.condition),
+    [readings],
+  );
+
+  useEffect(() => {
+    let alive = true;
+    getAllPlaceConditions().then((next) => {
+      if (alive) setReadings(next);
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [sheetSize, setSheetSize] = useState<SheetSize>("full");
   const [focus, setFocus] = useState<Place | null>(null);
