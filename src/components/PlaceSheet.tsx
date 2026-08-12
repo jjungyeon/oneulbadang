@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 
 import SeaCharacter from "@/components/SeaCharacter";
@@ -13,56 +13,11 @@ import {
   waterLabel,
   windLabel,
 } from "@/lib/labels";
-import type { PlaceReading, PlaceStatus } from "@/types/condition";
+import type { PlaceReading } from "@/types/condition";
 
 interface PlaceSheetProps {
   reading: PlaceReading | null;
   onClose: () => void;
-}
-
-/**
- * 캐릭터가 서는 배너. ref/ref_01.png의 구성 그대로다 —
- * 하늘색 위, 굵은 흰 파도 띠, 그 아래 진한 파랑 물. 배경에 흰 점과 짧은 물결선을 흩뿌린다.
- * 물 높이는 상태에 따라 달라진다. 물이 많이 빠지면 아래로 내려간다.
- */
-function SeaBand({ status, children }: { status: PlaceStatus; children: ReactNode }) {
-  const waterY = status === "LOW_TIDE" ? 166 : status === "COLD" ? 126 : 144;
-
-  return (
-    <div className="relative -mx-6 h-[200px] overflow-hidden bg-sea">
-      <svg
-        className="absolute inset-0 h-full w-full"
-        viewBox="0 0 390 200"
-        preserveAspectRatio="xMidYMax slice"
-        aria-hidden="true"
-      >
-        {/* 배경에 흩뿌린 작은 흰 점 */}
-        <circle cx="42" cy="34" r="4" fill="#FFFFFF" opacity="0.75" />
-        <circle cx="66" cy="62" r="2.6" fill="#FFFFFF" opacity="0.6" />
-        <circle cx="330" cy="28" r="3.4" fill="#FFFFFF" opacity="0.7" />
-        <circle cx="356" cy="58" r="2.4" fill="#FFFFFF" opacity="0.55" />
-        <circle cx="300" cy="86" r="2.8" fill="#FFFFFF" opacity="0.5" />
-
-        {/* 짧은 물결선. stroke 없이 채운 리본으로 그린다. */}
-        <path d="M26 88 q7 -7 14 0 t14 0 v3.6 q-7 7 -14 0 t-14 0 z" fill="#1EA7D4" opacity="0.5" />
-        <path d="M330 106 q7 -7 14 0 t14 0 v3.6 q-7 7 -14 0 t-14 0 z" fill="#1EA7D4" opacity="0.45" />
-
-        {/* 진한 파랑 물 */}
-        <path
-          d={`M0 ${waterY + 18} Q98 ${waterY + 6} 195 ${waterY + 16} T390 ${waterY + 14} L390 200 L0 200 Z`}
-          fill="#1EA7D4"
-        />
-        {/* 경계의 굵은 흰 파도 띠 */}
-        <path
-          d={`M0 ${waterY} Q98 ${waterY - 15} 195 ${waterY - 2} T390 ${waterY - 7} L390 ${waterY + 18} Q292 ${waterY + 7} 195 ${waterY + 18} T0 ${waterY + 20} Z`}
-          fill="#FFFFFF"
-        />
-      </svg>
-
-      {/* 인물이 프레임을 꽉 채우고 아래가 잘리도록 바닥에 붙인다 */}
-      <div className="absolute inset-x-0 bottom-0 flex justify-center">{children}</div>
-    </div>
-  );
 }
 
 /** 카드 하나. FN-06에 따라 상태 문구가 숫자보다 크다. */
@@ -143,11 +98,8 @@ export default function PlaceSheet({ reading, onClose }: PlaceSheetProps) {
                   ✕
                 </button>
               </div>
-
               <div className="my-4">
-                <SeaBand status={reading.condition.status}>
-                  <SeaCharacter status={reading.condition.status} />
-                </SeaBand>
+                <SeaCharacter status={reading.condition.status} />
               </div>
 
               <div className="grid grid-cols-2 gap-2">

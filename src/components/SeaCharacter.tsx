@@ -1,257 +1,247 @@
-import type { ReactNode } from "react";
+import Image from "next/image";
 
 import type { PlaceStatus } from "@/types/condition";
 
 /**
- * 여섯 상태의 캐릭터.
+ * 상태별 캐릭터 장면.
  *
- * ref/ref_01.png을 따른다 — 분홍빛 피부, 아주 작은 머리, 굵고 긴 팔다리,
- * 덩어리진 머리카락, 몸을 기울인 느슨한 자세. 프레임을 꽉 채워 아래가 잘린다.
- * 배경은 투명이다. 하늘·물·파도 띠는 시트의 배너가 만든다.
+ * 캐릭터는 public/characters 의 PNG 한 장을 통째로 쓴다. 조각내지 않는다.
+ * 그 밖의 것 — 하늘, 물, 파도, 날씨, 모래 — 은 전부 여기서 SVG와 CSS로 그린다.
+ * 이미지 파일은 캐릭터 여섯 장이 전부다.
  *
- * 여섯이 공유하는 것: 머리·얼굴·몸통·팔다리 모양과 색.
- * 상태마다 바뀌는 것: 팔다리 각도 / 기울기 / 입 / 소품 / 움직임.
- *
- * CLAUDE.md 형태 규칙: stroke 없이 채운 도형만, 끝은 둥글게,
- * 얼굴은 점 두 개와 짧은 선 하나. 코와 눈썹은 없다.
+ * 쌓는 순서: 하늘 → 배경 흰 점 → 캐릭터 → 물(캐릭터 앞을 가로지른다) → 날씨.
  */
 
-/* ref에서 뽑은 색. 살색은 살구빛이 아니라 분홍에 가깝다. */
-const SKIN = "#F5A5A2";
-const INK = "#1A1A1A";
+const BAND_HEIGHT = 220;
+
+const SKY = "#4FC3E8";
+const DEEP = "#1EA7D4";
 const WHITE = "#FFFFFF";
-const SUIT = "#FF8FB1"; // 수영복 분홍
-const TUBE = "#A8E063"; // 튜브 연두
-const BALL = "#FFD64F"; // 공 노랑
-const SHELL = "#FF6B5A"; // 조개 빨강
+const SUN = "#FFD64F";
+const WET_SAND = "#D8CDBF";
 
-/* 뼈대. 여섯 상태가 같은 값을 쓴다. */
-const HAIR = { x: 100, y: 34, r: 13.5 };
-const HEAD = { x: 100, y: 38, r: 11 };
-const BANGS_HALF = 10.58; // 머리 반지름 11에서 y를 3 올렸을 때의 반현
-const TORSO = { x: 81, y: 49, w: 38, h: 50, rx: 19 };
-const SHOULDER_L = { x: 85, y: 59 };
-const SHOULDER_R = { x: 115, y: 59 };
-const HIP_L = { x: 90, y: 95 };
-const HIP_R = { x: 110, y: 95 };
-const ARM_W = 22;
-const LEG_W = 24;
+interface Scene {
+  /** 물 높이. 영역 높이에 대한 비율. 0이면 물이 없다. */
+  waterRatio: number;
+  /** 파도 진폭 배수 */
+  waveScale: number;
+  /** 파도가 한 바퀴 도는 시간(초). 뒤 겹이 느리다. */
+  waveBackSeconds: number;
+  waveFrontSeconds: number;
+  /** 캐릭터에 거는 움직임 클래스. 빈 문자열이면 고정. */
+  motion: string;
+}
 
-/** 굵은 팔다리 하나. 어깨(엉덩이)를 축으로 돌린다. 끝은 뭉툭하게 둥글다. */
-function Limb({
-  pivot,
-  width,
-  length,
-  angle,
+/**
+ * 자세가 달라서 물에 잠기는 높이가 다르다.
+ * swimming은 다리가 아래로 뻗어 있고, hot은 누워 있고, 나머지는 서 있다.
+ */
+const SCENES: Record<PlaceStatus, Scene> = {
+  SWIMMING: { waterRatio: 0.45, waveScale: 1, waveBackSeconds: 17, waveFrontSeconds: 11, motion: "badang-swim" },
+  HOT: { waterRatio: 0.4, waveScale: 1, waveBackSeconds: 19, waveFrontSeconds: 12, motion: "badang-float" },
+  COLD: { waterRatio: 0.12, waveScale: 1, waveBackSeconds: 18, waveFrontSeconds: 11.5, motion: "badang-shiver" },
+  WINDY: { waterRatio: 0.1, waveScale: 1.5, waveBackSeconds: 9, waveFrontSeconds: 5.5, motion: "badang-tip" },
+  RAIN: { waterRatio: 0.08, waveScale: 1.5, waveBackSeconds: 9.5, waveFrontSeconds: 6, motion: "" },
+  LOW_TIDE: { waterRatio: 0, waveScale: 1, waveBackSeconds: 0, waveFrontSeconds: 0, motion: "" },
+};
+
+const IMAGE_SRC: Record<PlaceStatus, string> = {
+  SWIMMING: "/characters/swimming.png",
+  COLD: "/characters/cold.png",
+  HOT: "/characters/hot.png",
+  WINDY: "/characters/windy.png",
+  RAIN: "/characters/rain.png",
+  LOW_TIDE: "/characters/low_tide.png",
+};
+
+/**
+ * 물결 한 겹. 폭 800짜리 안에 주기 200의 물결을 네 번 반복한다.
+ * 이 조각을 폭 200%로 늘여 절반만큼 밀면 같은 모양이 이어져 끊김 없이 흐른다.
+ */
+function wavePath(amplitude: number, crest: number, height: number) {
+  let d = `M0 ${crest}`;
+  for (let x = 0; x < 800; x += 200) {
+    d += ` q50 ${-amplitude} 100 0 t100 0`;
+  }
+  return `${d} L800 ${height} L0 ${height} Z`;
+}
+
+/** 흐르는 물결 한 겹 */
+function WaveLayer({
+  seconds,
+  height,
+  crest,
+  amplitude,
+  delay = 0,
+  children,
 }: {
-  pivot: { x: number; y: number };
-  width: number;
-  length: number;
-  angle: number;
+  seconds: number;
+  height: number;
+  crest: number;
+  amplitude: number;
+  delay?: number;
+  children: React.ReactNode;
 }) {
-  const half = width / 2;
   return (
-    <rect
-      x={pivot.x - half}
-      y={pivot.y - half}
-      width={width}
-      height={length}
-      rx={half}
-      fill={SKIN}
-      transform={`rotate(${angle} ${pivot.x} ${pivot.y})`}
-    />
+    <svg
+      className="badang-wave absolute bottom-0 left-0 h-full"
+      style={{ width: "200%", animationDuration: `${seconds}s`, animationDelay: `${delay}s` }}
+      viewBox={`0 0 1600 ${height}`}
+      preserveAspectRatio="none"
+      aria-hidden="true"
+    >
+      {/* 폭 200%를 채우려면 같은 물결을 두 번 이어 붙인다. */}
+      <g>{children}</g>
+      <g transform="translate(800 0)">{children}</g>
+      <rect x="0" y={crest + amplitude} width="1600" height={height} fill="none" />
+    </svg>
   );
 }
-
-/* ── 입 (짧은 선 하나) ────────────────────────────── */
-
-const M_SMILE = <path d="M94.8 45 Q100 50.4 105.2 45 Q100 47.6 94.8 45 Z" fill={INK} />;
-const M_SOFT = <path d="M96.2 45.2 Q100 49 103.8 45.2 Q100 47.2 96.2 45.2 Z" fill={INK} />;
-const M_FLAT = <rect x="95.8" y="45" width="8.4" height="2.3" rx="1.15" fill={INK} />;
-const M_SMALL = <rect x="97.4" y="45" width="5.2" height="2.3" rx="1.15" fill={INK} />;
-const M_TILT = (
-  <rect x="95.8" y="44.8" width="8.4" height="2.3" rx="1.15" fill={INK} transform="rotate(-11 100 45.9)" />
-);
-const M_FROWN = <path d="M95.4 48 Q100 43 104.6 48 Q100 45.7 95.4 48 Z" fill={INK} />;
-
-/* ── 상태별 설정 ──────────────────────────────────── */
-
-interface Look {
-  mouth: ReactNode;
-  armL: number;
-  armR: number;
-  armLen: number;
-  legL: number;
-  legR: number;
-  /** 몸 전체 기울기. 정면 대칭으로 세워 두면 뻣뻣해 보인다. */
-  tilt: number;
-  armsInFront?: boolean;
-  bodyClass: string;
-  behind?: ReactNode;
-  front?: ReactNode;
-}
-
-const LOOKS: Record<PlaceStatus, Look> = {
-  /* 굵은 튜브에 몸을 기대고 한 팔을 번쩍 든다 */
-  SWIMMING: {
-    mouth: M_SMILE,
-    armL: 132, armR: -62, armLen: 64, legL: 30, legR: 4,
-    tilt: -9,
-    bodyClass: "badang-bob",
-    front: (
-      <path
-        fillRule="evenodd"
-        d="M100 100 m-40 0 a40 40 0 1 0 80 0 a40 40 0 1 0 -80 0 M100 100 m-23 0 a23 23 0 1 1 46 0 a23 23 0 1 1 -46 0"
-        fill={TUBE}
-      />
-    ),
-  },
-
-  /* 추워서 두 팔을 몸 앞으로 모았다 */
-  COLD: {
-    mouth: M_SMALL,
-    armL: -62, armR: 62, armLen: 40, legL: 7, legR: -7,
-    tilt: 4,
-    armsInFront: true,
-    bodyClass: "badang-shiver",
-    behind: (
-      <>
-        <rect x="44" y="30" width="6" height="19" rx="3" fill={WHITE} opacity="0.9" transform="rotate(-18 47 39)" />
-        <rect x="59" y="22" width="6" height="13" rx="3" fill={WHITE} opacity="0.7" transform="rotate(-18 62 28)" />
-        <rect x="150" y="30" width="6" height="19" rx="3" fill={WHITE} opacity="0.9" transform="rotate(18 153 39)" />
-        <rect x="135" y="22" width="6" height="13" rx="3" fill={WHITE} opacity="0.7" transform="rotate(18 138 28)" />
-      </>
-    ),
-  },
-
-  /* 한 팔을 높이 뻗어 공을 받는다 */
-  HOT: {
-    mouth: M_SOFT,
-    armL: 146, armR: -44, armLen: 64, legL: 14, legR: -18,
-    tilt: -7,
-    bodyClass: "badang-float",
-    /* 비치볼. 노란 공에 흰 띠 하나 */
-    behind: (
-      <g>
-        <circle cx="36" cy="42" r="19" fill={BALL} />
-        <path d="M17.8 36.6 a19 19 0 0 1 36.4 0 a44 44 0 0 0 -36.4 0 z" fill={WHITE} opacity="0.85" />
-      </g>
-    ),
-  },
-
-  /* 바람에 밀려 한 팔이 옆으로 뻗는다 */
-  WINDY: {
-    mouth: M_TILT,
-    armL: 98, armR: -22, armLen: 64, legL: 22, legR: -4,
-    tilt: 12,
-    bodyClass: "badang-lean",
-    behind: (
-      <>
-        <rect className="badang-drift" x="4" y="44" width="46" height="7" rx="3.5" fill={WHITE} opacity="0.95" />
-        <rect className="badang-drift" style={{ animationDelay: "0.5s" }} x="14" y="70" width="34" height="6.4" rx="3.2" fill={WHITE} opacity="0.85" />
-        <rect className="badang-drift" style={{ animationDelay: "1.1s" }} x="0" y="94" width="38" height="6" rx="3" fill={WHITE} opacity="0.75" />
-      </>
-    ),
-  },
-
-  /* 수영복 차림 그대로 비를 맞는다. 우산은 씌우지 않는다. */
-  RAIN: {
-    mouth: M_FLAT,
-    armL: 104, armR: -104, armLen: 62, legL: 11, legR: -11,
-    tilt: -3,
-    bodyClass: "badang-settle",
-    behind: (
-      <>
-        {[
-          { x: 18, d: "0s" }, { x: 44, d: "0.45s" }, { x: 66, d: "0.9s" },
-          { x: 132, d: "0.2s" }, { x: 158, d: "0.65s" }, { x: 180, d: "1.05s" },
-        ].map(({ x, d }) => (
-          <rect key={x} className="badang-drop" style={{ animationDelay: d }}
-            x={x} y="30" width="6" height="19" rx="3" fill={WHITE} opacity="0.95" />
-        ))}
-      </>
-    ),
-  },
-
-  /* 물이 빠져 드러난 바닥에 서 있다 */
-  LOW_TIDE: {
-    mouth: M_FROWN,
-    armL: 34, armR: -34, armLen: 64, legL: 11, legR: -11,
-    tilt: 5,
-    bodyClass: "badang-settle",
-    /* 드러난 바닥에 놓인 조개. 밑면을 평평하게 둔다. */
-    front: (
-      <>
-        <path d="M40 130 a9 9 0 0 1 18 0 z" fill={SHELL} />
-        <path d="M154 133 a6.5 6.5 0 0 1 13 0 z" fill={SHELL} opacity="0.85" />
-      </>
-    ),
-  },
-};
 
 interface SeaCharacterProps {
   status: PlaceStatus;
-  size?: number;
 }
 
-export default function SeaCharacter({ status, size = 292 }: SeaCharacterProps) {
-  const look = LOOKS[status];
-
-  const arms = (
-    <>
-      <Limb pivot={SHOULDER_L} width={ARM_W} length={look.armLen} angle={look.armL} />
-      <Limb pivot={SHOULDER_R} width={ARM_W} length={look.armLen} angle={look.armR} />
-    </>
-  );
+export default function SeaCharacter({ status }: SeaCharacterProps) {
+  const scene = SCENES[status];
+  const waterHeight = Math.round(BAND_HEIGHT * scene.waterRatio);
+  const amplitude = 9 * scene.waveScale;
+  // 물결이 출렁일 여유를 위에 둔다.
+  const layerHeight = waterHeight + amplitude * 2;
+  const crest = amplitude * 2;
 
   return (
-    <svg
-      width={size}
-      height={(size * 150) / 200}
-      viewBox="0 0 200 150"
-      role="img"
-      aria-hidden="true"
-      className="shrink-0 overflow-visible"
+    <div
+      className="relative -mx-6 overflow-hidden rounded-b-3xl"
+      style={{ height: BAND_HEIGHT, background: SKY }}
     >
-      {look.behind}
+      {/* 배경에 흩뿌린 작은 흰 점 */}
+      {(status === "SWIMMING" || status === "COLD") && (
+        <svg className="absolute inset-0 h-full w-full" viewBox="0 0 390 220" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+          {[
+            { x: 44, y: 40, r: 5, d: 0 },
+            { x: 74, y: 74, r: 3, d: 1.1 },
+            { x: 330, y: 34, r: 4.2, d: 0.5 },
+            { x: 356, y: 68, r: 2.6, d: 1.7 },
+            { x: 300, y: 104, r: 3.4, d: 2.2 },
+            { x: 30, y: 118, r: 2.8, d: 1.4 },
+          ].map((dot) => (
+            <circle
+              key={`${dot.x}-${dot.y}`}
+              // COLD는 움직임이 없다.
+              className={status === "SWIMMING" ? "badang-rise" : undefined}
+              style={status === "SWIMMING" ? { animationDelay: `${dot.d}s` } : undefined}
+              cx={dot.x}
+              cy={dot.y}
+              r={dot.r}
+              fill={WHITE}
+              opacity="0.75"
+            />
+          ))}
+        </svg>
+      )}
 
-      <g className={`badang-anim ${look.bodyClass}`}>
-        <g transform={`rotate(${look.tilt} 100 96)`}>
-          {/* 다리 */}
-          <Limb pivot={HIP_L} width={LEG_W} length={62} angle={look.legL} />
-          <Limb pivot={HIP_R} width={LEG_W} length={62} angle={look.legR} />
+      {/* 캐릭터. 잘리지 않도록 통째로 영역 안에 넣는다. */}
+      <div className={`absolute inset-0 ${scene.motion}`}>
+        <Image
+          src={IMAGE_SRC[status]}
+          alt=""
+          aria-hidden="true"
+          fill
+          priority
+          sizes="(max-width: 430px) 100vw, 430px"
+          className="object-contain"
+        />
+      </div>
 
-          {/* 팔은 보통 몸 뒤, 몸 앞으로 모으는 자세일 때만 앞 */}
-          {!look.armsInFront && arms}
+      {/* 물. 캐릭터 앞을 가로지르는 층이다. */}
+      {waterHeight > 0 && (
+        <div className="absolute inset-x-0 bottom-0" style={{ height: layerHeight }}>
+          {/* 뒤 겹 — 느리게 */}
+          <WaveLayer seconds={scene.waveBackSeconds} height={layerHeight} crest={crest} amplitude={amplitude}>
+            <path d={wavePath(amplitude * 0.8, crest - amplitude * 0.5, layerHeight)} fill={DEEP} opacity="0.55" />
+          </WaveLayer>
 
-          {/* 몸통 = 수영복 */}
-          <rect x={TORSO.x} y={TORSO.y} width={TORSO.w} height={TORSO.h} rx={TORSO.rx} fill={SUIT} />
+          {/* 앞 겹 — 빠르게. 굵은 흰 띠를 먼저 깔고 그 위를 물이 덮어 경계만 남긴다. */}
+          <WaveLayer seconds={scene.waveFrontSeconds} height={layerHeight} crest={crest} amplitude={amplitude} delay={-2}>
+            <>
+              <path d={wavePath(amplitude, crest - 13, layerHeight)} fill={WHITE} />
+              <path d={wavePath(amplitude, crest, layerHeight)} fill={DEEP} />
+            </>
+          </WaveLayer>
+        </div>
+      )}
 
-          {look.armsInFront && arms}
+      {/* 물이 빠진 바닥. 젖은 모래와 얕은 웅덩이. */}
+      {status === "LOW_TIDE" && (
+        <svg className="absolute inset-x-0 bottom-0 w-full" height={Math.round(BAND_HEIGHT * 0.15)} viewBox="0 0 390 33" preserveAspectRatio="none" aria-hidden="true">
+          <path d="M0 6 Q98 0 195 5 T390 3 L390 33 L0 33 Z" fill={WET_SAND} />
+          <ellipse cx="70" cy="20" rx="34" ry="6" fill={DEEP} opacity="0.35" />
+          <ellipse cx="205" cy="26" rx="26" ry="5" fill={DEEP} opacity="0.3" />
+          <ellipse cx="318" cy="18" rx="30" ry="5.5" fill={DEEP} opacity="0.32" />
+        </svg>
+      )}
 
-          {/* 목 */}
-          <rect x={HEAD.x - 5} y={HEAD.y + 4} width="10" height="13" rx="5" fill={SKIN} />
+      {/* 날씨 요소 */}
+      {status === "RAIN" && (
+        <svg className="absolute inset-0 h-full w-full" viewBox="0 0 390 220" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+          {[
+            { x: 24, s: 1.15, d: 0 }, { x: 62, s: 1.5, d: 0.55 }, { x: 104, s: 1.3, d: 1.1 },
+            { x: 148, s: 1.6, d: 0.3 }, { x: 196, s: 1.2, d: 0.85 }, { x: 238, s: 1.45, d: 0.15 },
+            { x: 284, s: 1.25, d: 0.7 }, { x: 326, s: 1.55, d: 1.25 }, { x: 362, s: 1.35, d: 0.45 },
+          ].map((drop) => (
+            <rect
+              key={drop.x}
+              className="badang-drop"
+              style={{ animationDuration: `${drop.s}s`, animationDelay: `${drop.d}s` }}
+              x={drop.x}
+              y="-16"
+              width="4"
+              height="18"
+              rx="2"
+              fill={WHITE}
+              opacity="0.9"
+            />
+          ))}
+        </svg>
+      )}
 
-          {/* 머리카락 덩어리. 머리보다 크고 위로 올라앉아 부피가 생긴다. */}
-          <circle cx={HAIR.x} cy={HAIR.y} r={HAIR.r} fill={INK} />
-          {/* 옆으로 넘긴 한 가닥 */}
-          <ellipse cx="87" cy="29" rx="7" ry="4.6" fill={INK} transform="rotate(-28 87 29)" />
+      {status === "WINDY" && (
+        <svg className="absolute inset-0 h-full w-full" viewBox="0 0 390 220" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+          {[
+            { y: 44, w: 74, t: 0, s: 4.2 },
+            { y: 92, w: 56, t: 1.3, s: 3.4 },
+            { y: 138, w: 64, t: 2.4, s: 4.8 },
+          ].map((line) => (
+            <path
+              key={line.y}
+              className="badang-blow"
+              style={{ animationDelay: `${line.t}s`, animationDuration: `${line.s}s` }}
+              d={`M0 ${line.y} q${line.w / 4} -9 ${line.w / 2} 0 t${line.w / 2} 0 v6 q-${line.w / 4} 9 -${line.w / 2} 0 t-${line.w / 2} 0 z`}
+              fill={WHITE}
+              opacity="0.9"
+            />
+          ))}
+        </svg>
+      )}
 
-          {/* 얼굴 */}
-          <circle cx={HEAD.x} cy={HEAD.y} r={HEAD.r} fill={SKIN} />
-          {/* 앞머리 */}
-          <path
-            d={`M${HEAD.x - BANGS_HALF} ${HEAD.y - 3} A${HEAD.r} ${HEAD.r} 0 0 1 ${HEAD.x + BANGS_HALF} ${HEAD.y - 3} Z`}
-            fill={INK}
-          />
-          {/* 얼굴 = 점 두 개와 짧은 선 하나 */}
-          <circle cx="95.8" cy="40.6" r="2.1" fill={INK} />
-          <circle cx="104.2" cy="40.6" r="2.1" fill={INK} />
-          {look.mouth}
-        </g>
-      </g>
-
-      {look.front}
-    </svg>
+      {status === "HOT" && (
+        <svg className="absolute inset-0 h-full w-full" viewBox="0 0 390 220" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+          <circle cx="330" cy="46" r="24" fill={SUN} />
+          {[0, 45, 90, 135, 180, 225, 270, 315].map((angle) => (
+            <rect
+              key={angle}
+              x="328"
+              y="10"
+              width="4"
+              height="11"
+              rx="2"
+              fill={SUN}
+              transform={`rotate(${angle} 330 46)`}
+            />
+          ))}
+        </svg>
+      )}
+    </div>
   );
 }

@@ -30,7 +30,7 @@ const JEJU_BOUNDS = L.latLngBounds(
  * 바깥 44×44는 터치 영역(NF-05), 안쪽 원이 눈에 보이는 점이다.
  */
 function createMarkerIcon(swimming: boolean) {
-  const fill = swimming ? "#1EA7D4" : "#C3CED5";
+  const fill = swimming ? "#1EA7D4" : "#C9D2DA";
   return L.divIcon({
     className: "",
     // 둥근 물방울. 몸통은 반지름 11의 원이고 아래로만 뾰족하게 모여 실제 위치를 가리킨다.
