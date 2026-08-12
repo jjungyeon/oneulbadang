@@ -12,8 +12,12 @@ import type { Place } from "@/types/place";
 const JEJU_CENTER: [number, number] = [33.38, 126.55];
 const JEJU_ZOOM = 9;
 
-/** 상단 "예시 데이터입니다" 배지가 마커를 가리지 않게 비워 두는 높이 */
-const TOP_BADGE_INSET = 72;
+/** 상단 배지와 검색창이 마커를 가리지 않게 비워 두는 높이 */
+const TOP_INSET_WITH_SEARCH = 132; // 시트가 닫혀 있고 검색창이 떠 있을 때
+const TOP_INSET_BARE = 72; // 시트가 열려 검색창이 사라졌을 때
+
+/** 검색으로 고른 장소로 옮겨 갈 때의 배율. 이 배율이면 마커가 서로 떨어진다. */
+const FOCUS_ZOOM = 12;
 
 /** 마커 17곳을 모두 감싸는 범위. 화면 폭이 320~430 어디든 전부 들어오게 하는 기준이 된다. */
 const JEJU_BOUNDS = L.latLngBounds(
@@ -57,35 +61,54 @@ const OTHER_ICON = createMarkerIcon(false);
  * 폭이 바뀔 때(회전)만 다시 맞춘다. 높이는 모바일 주소창이 접힐 때마다 바뀌는데,
  * 거기에 반응하면 사용자가 움직여 둔 지도를 되돌려 버린다.
  */
-function FitJeju({ bottomInset }: { bottomInset: number }) {
+function MapView({
+  bottomInset,
+  focus,
+}: {
+  bottomInset: number;
+  focus: Place | null;
+}) {
   const map = useMap();
 
   useEffect(() => {
     const container = map.getContainer();
+    const topInset = bottomInset > 0 ? TOP_INSET_BARE : TOP_INSET_WITH_SEARCH;
     let lastWidth = 0;
 
-    const fit = (animate: boolean) => {
+    const apply = (animate: boolean) => {
       map.invalidateSize({ animate: false });
+
+      if (focus) {
+        // 화면 중심을 시트 높이의 절반만큼 아래로 옮겨야 장소가 보이는 영역 가운데 온다.
+        const point = map.project([focus.lat, focus.lng], FOCUS_ZOOM);
+        const shifted = map.unproject(
+          point.add([0, (bottomInset - topInset) / 2]),
+          FOCUS_ZOOM,
+        );
+        map.setView(shifted, FOCUS_ZOOM, { animate, duration: 0.5 });
+        return;
+      }
+
       map.fitBounds(JEJU_BOUNDS, {
-        paddingTopLeft: [36, TOP_BADGE_INSET],
+        paddingTopLeft: [36, topInset],
         paddingBottomRight: [36, 36 + bottomInset],
         animate,
         duration: 0.35,
       });
     };
 
-    fit(true);
+    apply(true);
 
     const observer = new ResizeObserver(() => {
       const width = container.clientWidth;
       if (width === lastWidth) return;
       lastWidth = width;
-      fit(false);
+      apply(false);
     });
 
     observer.observe(container);
     return () => observer.disconnect();
-  }, [map, bottomInset]);
+  }, [map, bottomInset, focus]);
 
   return null;
 }
@@ -101,6 +124,8 @@ interface JejuMapProps {
   onSelectPlace: (place: Place) => void;
   /** 바텀시트가 아래에서 가리는 높이(px). 0이면 시트가 닫힌 상태다. */
   bottomInset: number;
+  /** 검색으로 고른 장소. null이면 제주 전체를 담는다. */
+  focus: Place | null;
   onBackgroundClick: () => void;
 }
 
@@ -108,6 +133,7 @@ export default function JejuMap({
   conditions,
   onSelectPlace,
   bottomInset,
+  focus,
   onBackgroundClick,
 }: JejuMapProps) {
   const markers = useMemo(
@@ -145,7 +171,7 @@ export default function JejuMap({
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         maxZoom={19}
       />
-      <FitJeju bottomInset={bottomInset} />
+      <MapView bottomInset={bottomInset} focus={focus} />
       <MapBackgroundClick onClick={onBackgroundClick} />
       {markers}
     </MapContainer>
