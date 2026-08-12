@@ -30,14 +30,15 @@ const JEJU_BOUNDS = L.latLngBounds(
  * 바깥 44×44는 터치 영역(NF-05), 안쪽 원이 눈에 보이는 점이다.
  */
 function createMarkerIcon(swimming: boolean) {
-  const fill = swimming ? "#1EA7D4" : "#9BA7B0";
+  const fill = swimming ? "#1EA7D4" : "#C3CED5";
   return L.divIcon({
     className: "",
-    // 물방울 모양. 뾰족한 끝이 아래를 향해 실제 위치를 가리킨다.
+    // 둥근 물방울. 몸통은 반지름 11의 원이고 아래로만 뾰족하게 모여 실제 위치를 가리킨다.
+    // 호의 양 끝은 꼭짓점(12,29)에서 그은 접점이라 원과 뾰족한 끝이 매끄럽게 이어진다.
     html: `<div class="grid h-11 w-11 place-items-center">
-             <svg width="22" height="28" viewBox="0 0 22 28" aria-hidden="true">
-               <path d="M11 28 C11 28 0 16.5 0 10.2 A11 11 0 1 1 22 10.2 C22 16.5 11 28 11 28 Z" fill="${fill}"/>
-               <circle cx="7.6" cy="8" r="3" fill="#FFFFFF" opacity="0.5"/>
+             <svg width="24" height="30" viewBox="0 0 24 30" aria-hidden="true">
+               <path d="M3.61 19.12 A11 11 0 1 1 20.39 19.12 L12 29 Z" fill="${fill}"/>
+               <circle cx="12" cy="12" r="4.2" fill="#FFFFFF"/>
              </svg>
            </div>`,
     iconSize: [44, 44],

@@ -11,9 +11,6 @@
   --color-coral: #ff6b5a; /* 포인트 빨강 */
   --color-blossom: #ff8fb1; /* 포인트 분홍 */
 
-  /* FN-02의 "나머지" 마커용. 상태를 나타내는 색이 아니라 색이 빠졌다는 표시다. */
-  --color-mute: #9ba7b0;
-
   /* 시트 안 카드 바탕. 흰색 대신 연한 하늘색 */
   --color-mist: #e2f2fb;
 
