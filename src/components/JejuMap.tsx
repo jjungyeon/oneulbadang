@@ -138,7 +138,8 @@ export default function JejuMap({
         const level = advice?.level ?? "unknown";
         return (
           <Marker
-            key={place.id}
+            // Leaflet sets title/alt only when creating a marker.
+            key={`${place.id}-${advice?.title ?? "입수 전 확인 필요"}`}
             position={[place.lat, place.lng]}
             icon={ADVICE_ICONS[level]}
             title={`${place.name} · ${advice?.title ?? "입수 전 확인 필요"}`}
