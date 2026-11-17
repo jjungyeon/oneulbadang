@@ -1,11 +1,16 @@
 "use client";
 
+// @refresh reset
+// Leaflet removes its panes on effect cleanup; refresh must recreate the map instance.
+
 import { useEffect, useMemo } from "react";
 import { MapContainer, Marker, TileLayer, useMap, useMapEvent } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
 import { PLACES } from "@/data/places";
+import { ADVICE_STYLE } from "@/lib/waterplayAdvice";
+import type { AdviceLevel } from "@/types/condition";
 import type { Condition } from "@/types/condition";
 import type { Place } from "@/types/place";
 
@@ -27,30 +32,12 @@ const JEJU_BOUNDS = L.latLngBounds(
   PLACES.map((p) => [p.lat, p.lng] as [number, number]),
 );
 
-/**
- * 마커 두 가지. FN-02에 따라 두 갈래로만 나눈다.
- * 물놀이 좋은 곳(SWIMMING)은 색이 찬 마커, 나머지는 회색 마커다.
- * 바깥 44×44는 터치 영역(NF-05), 안쪽 원이 눈에 보이는 점이다.
- */
-function createMarkerIcon(swimming: boolean) {
-  const fill = swimming ? "#1EA7D4" : "#C9D2DA";
-  return L.divIcon({
-    className: "",
-    // 둥근 물방울. 몸통은 반지름 11의 원이고 아래로만 뾰족하게 모여 실제 위치를 가리킨다.
-    // 호의 양 끝은 꼭짓점(12,29)에서 그은 접점이라 원과 뾰족한 끝이 매끄럽게 이어진다.
-    html: `<div class="grid h-11 w-11 place-items-center">
-             <svg width="24" height="30" viewBox="0 0 24 30" aria-hidden="true">
-               <path d="M3.61 19.12 A11 11 0 1 1 20.39 19.12 L12 29 Z" fill="${fill}"/>
-               <circle cx="12" cy="12" r="4.2" fill="#FFFFFF"/>
-             </svg>
-           </div>`,
-    iconSize: [44, 44],
-    iconAnchor: [22, 36],
-  });
+/** Advice colors are independent of the PNG character pose. */
+function createMarkerIcon(level: AdviceLevel) {
+  const { color, symbol } = ADVICE_STYLE[level];
+  return L.divIcon({className:"", html:`<div class="grid h-11 w-11 place-items-center"><svg width="28" height="34" viewBox="0 0 24 30" aria-hidden="true"><path d="M3.61 19.12 A11 11 0 1 1 20.39 19.12 L12 29 Z" fill="${color}"/><text x="12" y="17" text-anchor="middle" fill="white" font-size="17" font-weight="bold">${symbol}</text></svg></div>`, iconSize:[44,44],iconAnchor:[22,36]});
 }
-
-const SWIMMING_ICON = createMarkerIcon(true);
-const OTHER_ICON = createMarkerIcon(false);
+const ADVICE_ICONS = {good:createMarkerIcon("good"),caution:createMarkerIcon("caution"),avoid:createMarkerIcon("avoid"),unknown:createMarkerIcon("unknown")};
 
 /**
  * 실제 화면 크기에 맞춰 제주 전체를 담는다. 마커 반지름 + 여백만큼 패딩을 준다.
@@ -147,15 +134,17 @@ export default function JejuMap({
 }: JejuMapProps) {
   const markers = useMemo(
     () =>
-      conditions.map(({ place, status }) => {
-        const swimming = status === "SWIMMING";
+      conditions.map(({ place, advice }) => {
+        const level = advice?.level ?? "unknown";
         return (
           <Marker
             key={place.id}
             position={[place.lat, place.lng]}
-            icon={swimming ? SWIMMING_ICON : OTHER_ICON}
+            icon={ADVICE_ICONS[level]}
+            title={`${place.name} · ${advice?.title ?? "입수 전 확인 필요"}`}
+            alt={`${place.name} · ${advice?.title ?? "입수 전 확인 필요"}`}
             // 마커가 겹치는 구간에서는 색이 찬 쪽이 위로 오게 한다.
-            zIndexOffset={swimming ? 1000 : 0}
+            zIndexOffset={level === "avoid" ? 1000 : level === "caution" ? 500 : 0}
             eventHandlers={{ click: () => onSelectPlace(place) }}
           />
         );

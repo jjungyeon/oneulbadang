@@ -1,71 +1,51 @@
 import { PLACES } from "@/data/places";
-import { getMockObservation } from "@/data/mock";
-import { evaluateCondition } from "@/lib/condition";
-import type { Observation, PlaceReading } from "@/types/condition";
+import { evaluateCondition, tideRatio } from "@/lib/condition";
+import { emptyObservation } from "@/lib/readings";
+import type { PlaceReading } from "@/types/condition";
 import type { Place } from "@/types/place";
-
 import { STATION_NAME_BY_REGION } from "./config";
 import { getTide } from "./tide";
-import { getWaterTemperature } from "./waterTemperature";
+import { getSafety } from "./safety";
 import { getWeather } from "./weather";
 
-/**
- * 한 장소의 관측값을 모은다.
- *
- * 예시 데이터에서 출발해 실제로 받아 온 항목만 덮어쓴다.
- * 조위·수온·날씨 셋이 모두 실데이터일 때만 isMock이 false가 된다.
- * 하나라도 예시면 화면의 "예시 데이터입니다"가 계속 보인다(FN-09).
- */
-export async function buildReading(place: Place): Promise<PlaceReading> {
-  const observation: Observation = getMockObservation(place);
-
-  // 셋을 동시에 부른다. 어느 하나가 실패해도 나머지는 살린다(NF-03).
-  const [tide, water, weather] = await Promise.all([
-    getTide(place).catch(() => null),
-    getWaterTemperature(place).catch(() => null),
-    getWeather(place).catch(() => null),
+/** Live service never starts with mock observations or substitutes sample numbers. */
+export async function buildReading(place: Place, now = new Date()): Promise<PlaceReading> {
+  const observation = emptyObservation(STATION_NAME_BY_REGION[place.region]);
+  const [tide, weather, safety] = await Promise.all([
+    getTide(place, now).catch(() => null), getWeather(place, now).catch(() => null), getSafety(place, now).catch(() => undefined),
   ]);
-
-  const stationName = STATION_NAME_BY_REGION[place.region];
-
-  if (tide) {
-    observation.tide = {
-      ...observation.tide,
-      currentLevel: tide.recent.currentLevel,
-      previousLevel: tide.recent.previousLevel,
-      observedAt: tide.recent.observedAt,
-      stationName: tide.recent.stationName || stationName,
-      ...(tide.range ?? {}),
-    };
+  observation.safety = safety;
+  const recent = tide?.recent;
+  if (recent) {
+    const { currentLevel, previousLevel, previousObservedAt, observedAt, stationName } = recent;
+    const difference = currentLevel !== undefined && previousLevel !== undefined ? currentLevel - previousLevel : undefined;
+    observation.tide = { ...observation.tide, currentLevel, previousLevel, previousObservedAt, observedAt, stationName,
+      trend: difference === undefined ? "UNKNOWN" : difference > 0 ? "RISING" : difference < 0 ? "FALLING" : "STABLE" };
+    observation.water = { temperature: recent.waterTemperature, observedAt, stationName };
   }
-
-  if (water) {
-    observation.water = {
-      temperature: water.temperature,
-      observedAt: water.observedAt,
-      stationName: water.stationName || stationName,
-    };
-  }
-
-  if (weather) {
-    observation.weather = {
-      ...observation.weather,
-      sky: weather.sky,
-      rain: weather.rain,
-    };
-  }
-
-  // 조위는 최저·최고까지 있어야 ratio를 낼 수 있다. 없으면 실데이터로 치지 않는다.
-  const tideIsReal = Boolean(tide?.range);
-  const isMock = !(tideIsReal && Boolean(water) && Boolean(weather));
-
+  if (tide?.range) Object.assign(observation.tide, tide.range);
+  if (tide?.extremes) Object.assign(observation.tide, tide.extremes);
+  observation.weather = {
+    ...weather,
+    airTemperature: recent?.airTemperature ?? weather?.airTemperature,
+    windSpeed: recent?.windSpeed ?? weather?.windSpeed,
+    airKind: recent?.airTemperature !== undefined ? "observed" : weather?.airTemperature !== undefined ? "forecast" : undefined,
+    windKind: recent?.windSpeed !== undefined ? "observed" : weather?.windSpeed !== undefined ? "forecast" : undefined,
+    observedAt: recent?.observedAt, stationName: recent?.stationName,
+  };
+  const fields = [observation.tide.currentLevel, observation.water.temperature, observation.weather.airTemperature,
+    observation.weather.windSpeed, observation.weather.sky, observation.weather.rain];
+  const complete = fields.every((v) => v !== undefined) && tideRatio(observation.tide) !== undefined;
   return {
-    condition: evaluateCondition(place, observation, isMock),
-    observation,
+    refreshDelayed: Boolean(tide?.refreshDelayed || weather?.refreshDelayed),
+    condition: evaluateCondition(place, observation, false), observation, fetchedAt: now.toISOString(),
+    dataStatus: complete ? "live" : fields.some((v) => v !== undefined) ? "partial" : "unavailable",
   };
 }
 
-/** 지도가 마커 색을 정하려면 17곳이 다 필요하다. */
+/** The fixed 17 places share in-flight station/grid requests in the transport cache.
+ * Start them together so sequential regional timeouts cannot exceed the client deadline. */
 export async function buildAllReadings(): Promise<PlaceReading[]> {
-  return Promise.all(PLACES.map((place) => buildReading(place)));
+  const now = new Date();
+  return Promise.all(PLACES.map((place) => buildReading(place, now)));
 }

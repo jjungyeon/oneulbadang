@@ -1,0 +1,39 @@
+.scene { height: clamp(220px, 56vw, 300px); overflow: hidden; background: #eff7fc; }
+.scene > svg { display: block; width: 100%; height: 100%; }
+.scene image, .float, .swim { transform-box: fill-box; transform-origin: center; }
+.level { transition: transform 600ms ease-in-out; }
+@keyframes drift { 0%,100% { transform: translateX(-4px); } 50% { transform: translateX(5px); } }
+@keyframes float { 0%,100% { transform: translateY(2px) rotate(-1.5deg); } 50% { transform: translateY(-3px) rotate(1.5deg); } }
+@keyframes swim { 0%,100% { transform: translate(-4px,2px) rotate(-1deg); } 50% { transform: translate(4px,-3px) rotate(1deg); } }
+@keyframes shiver { 0%,100% { transform: translateX(0); } 30% { transform: translateX(-.65px); } 65% { transform: translateX(.65px); } }
+@keyframes breathe { 0%,100% { opacity: .6; } 50% { opacity: 1; } }
+@keyframes brace { 0%,100% { transform: rotate(-1deg); } 50% { transform: rotate(2deg); } }
+@keyframes gust { 0%,100% { transform: translateX(-8px); opacity: .65; } 50% { transform: translateX(11px); opacity: 1; } }
+@keyframes leaf { 0%,100% { transform: translate(-6px,3px) rotate(-12deg); } 50% { transform: translate(13px,-7px) rotate(18deg); } }
+@keyframes rain { 0% { transform: translateY(-9px); opacity: 0; } 20% { opacity: .9; } 75% { opacity: .9; } 100% { transform: translateY(50px); opacity: 0; } }
+@keyframes ripple { 0%,100% { transform: scaleX(.97); opacity: .75; } 50% { transform: scaleX(1.04); opacity: 1; } }
+@keyframes bubble { 0%,100% { transform: translateY(2px); opacity: .4; } 50% { transform: translateY(-6px); opacity: 1; } }
+@media (prefers-reduced-motion: no-preference) {
+  .cloud { animation: drift 12s ease-in-out infinite; }
+  .cloudBack { animation: drift 15s ease-in-out -7s infinite reverse; }
+  .waveBack { animation: drift 5.8s ease-in-out infinite; }
+  .waveFront { animation: drift 4.3s ease-in-out -2s infinite reverse; }
+  .current { animation: drift 6s ease-in-out infinite; }
+  .float { animation: float 5s ease-in-out infinite; }
+  .swim { animation: swim 4.6s ease-in-out infinite; }
+  .shiver { animation: shiver .28s ease-in-out infinite; }
+  .shiverMark { animation: breathe 1.4s ease-in-out infinite; }
+  .brace { animation: brace 3.2s ease-in-out infinite; transform-origin: bottom center; }
+  .gust { animation: gust 3.8s ease-in-out infinite; }
+  .gustBack { animation: gust 4.3s ease-in-out -1.8s infinite; }
+  .leaf { animation: leaf 3.8s ease-in-out infinite; }
+  .leafBack { animation: leaf 4.3s ease-in-out -1.8s infinite; }
+  .rain { animation: rain 2.5s linear infinite; }
+  .ripple { animation: ripple 4.6s ease-in-out infinite; }
+  .foam { animation: float 3.4s ease-in-out infinite; }
+  .foamBack { animation: float 3.7s ease-in-out -1.8s infinite; }
+  .bubbles { animation: bubble 2.3s ease-in-out infinite; }
+  .look { animation: brace 5s ease-in-out infinite; transform-origin: bottom center; }
+}
+.scene[data-paused="true"] * { animation-play-state: paused !important; }
+@media (prefers-reduced-motion: reduce) { .level { transition: none; } }

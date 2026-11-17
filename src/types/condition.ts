@@ -4,15 +4,17 @@ import type { Place } from "./place";
 export interface TideData {
   currentLevel?: number;
   previousLevel?: number;
+  previousObservedAt?: string;
   lowLevel?: number;
   highLevel?: number;
   nextHighTime?: string;
   nextHighLevel?: number;
   nextLowTime?: string;
   nextLowLevel?: number;
-  trend: "RISING" | "FALLING" | "STABLE";
+  trend: "RISING" | "FALLING" | "STABLE" | "UNKNOWN";
   observedAt: string;
   stationName: string;
+  forecastDate?: string;
 }
 
 export interface WaterTemperature {
@@ -22,10 +24,20 @@ export interface WaterTemperature {
 }
 
 export interface WeatherData {
-  airTemperature: number;
-  sky: "CLEAR" | "CLOUDY" | "OVERCAST";
-  rain: boolean;
-  windSpeed: number;
+  refreshDelayed?: boolean;
+  airTemperature?: number;
+  sky?: "CLEAR" | "CLOUDY" | "OVERCAST";
+  rain?: boolean;
+  precipitationCode?: number;
+  windSpeed?: number;
+  forecastAt?: string;
+  issuedAt?: string;
+  observedAt?: string;
+  stationName?: string;
+  grid?: { nx: number; ny: number };
+  kind?: "forecast";
+  airKind?: "observed" | "forecast";
+  windKind?: "observed" | "forecast";
 }
 
 export type PlaceStatus =
@@ -36,11 +48,12 @@ export type PlaceStatus =
   | "RAIN"
   | "LOW_TIDE";
 
-export type TideStatus = "LOW" | "FALLING" | "MID" | "RISING" | "HIGH";
+export type TideStatus = "LOW" | "FALLING" | "MID" | "RISING" | "HIGH" | "UNKNOWN";
 
 export interface Condition {
+  advice?: WaterplayAdvice;
   place: Place;
-  status: PlaceStatus;
+  status: PlaceStatus | null;
   message: string;
   tideStatus: TideStatus;
   isMock: boolean;
@@ -48,9 +61,33 @@ export interface Condition {
 
 /** 한 장소의 원본 관측값 묶음. 여기서 Condition을 유도한다. */
 export interface Observation {
+  safety?: SafetyData;
   tide: TideData;
   water: WaterTemperature;
   weather: WeatherData;
+}
+
+export type AdviceLevel = "good" | "caution" | "avoid" | "unknown";
+export interface WaterplayAdvice {
+  level: AdviceLevel;
+  title: string;
+  reason: string;
+  limitation: string;
+}
+export type SourceState = "available" | "unavailable" | "access-denied" | "no-data" | "stale" | "unsupported" | "off-season";
+export interface SafetySource {
+  state: SourceState;
+  label?: string;
+  at?: string;
+  checkedAt?: string;
+  waveHeight?: number;
+}
+export interface SafetyData {
+  beach: SafetySource;
+  rip: SafetySource;
+  warning: SafetySource;
+  // No verified place-specific control feed yet. An index is not a control order.
+  control: "unknown";
 }
 
 /**
@@ -58,6 +95,9 @@ export interface Observation {
  * 지도는 condition만 쓰고, 바텀시트는 숫자를 보여줘야 해서 observation까지 쓴다.
  */
 export interface PlaceReading {
+  refreshDelayed?: boolean;
   condition: Condition;
   observation: Observation;
+  fetchedAt?: string;
+  dataStatus?: "live" | "partial" | "unavailable";
 }

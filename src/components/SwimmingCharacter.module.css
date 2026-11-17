@@ -1,0 +1,89 @@
+.scene { height: 220px; overflow: hidden; background: #9fe5f4; }
+.scene > svg { display: block; width: 100%; height: 100%; }
+.level { transition: transform 600ms ease-in-out; }
+.eyes { transform-box: fill-box; transform-origin: center; }
+.splash { opacity: 0; }
+
+/* Local joint origins come from the outer SVG translate groups, not bounding boxes. */
+.bodyFloat, .head, .waveArm, .waveHand, .paddleArm, .paddleHand,
+.legBack, .legFront, .ring { transform-origin: 0 0; }
+
+@keyframes float {
+  0%, 100% { transform: translateY(1px) rotate(-8deg); }
+  25% { transform: translateY(-3px) rotate(-6deg); }
+  50% { transform: translateY(-2px) rotate(-7deg); }
+  75% { transform: translateY(3px) rotate(-10deg); }
+}
+@keyframes head {
+  0%, 100% { transform: rotate(-7deg); }
+  30% { transform: rotate(-3deg); }
+  68% { transform: rotate(-9deg); }
+}
+@keyframes raisedArm {
+  0%, 100% { transform: rotate(3deg); }
+  30% { transform: rotate(-9deg); }
+  65% { transform: rotate(7deg); }
+}
+@keyframes raisedHand {
+  0%, 100% { transform: rotate(-6deg); }
+  36% { transform: rotate(6deg); }
+  70% { transform: rotate(-12deg); }
+}
+@keyframes paddle {
+  0%, 100% { transform: rotate(0deg); }
+  32% { transform: rotate(12deg); }
+  70% { transform: rotate(-8deg); }
+}
+@keyframes paddleHand {
+  0%, 100% { transform: rotate(-4deg); }
+  38% { transform: rotate(11deg); }
+  75% { transform: rotate(-10deg); }
+}
+@keyframes kickBack {
+  0%, 100% { transform: rotate(-12deg); }
+  50% { transform: rotate(14deg); }
+}
+@keyframes kickFront {
+  0%, 100% { transform: rotate(10deg); }
+  50% { transform: rotate(-16deg); }
+}
+@keyframes ring {
+  0%, 100% { transform: translateY(0) rotate(1deg); }
+  35% { transform: translateY(1.5px) rotate(-1deg); }
+  75% { transform: translateY(-1px) rotate(1.5deg); }
+}
+@keyframes blink {
+  0%, 41%, 46%, 100% { transform: scaleY(1); }
+  43%, 44% { transform: scaleY(.08); }
+}
+@keyframes water { to { transform: translateX(195px); } }
+@keyframes splash {
+  0%, 45%, 100% { opacity: 0; transform: translate(0, 3px); }
+  60% { opacity: .85; transform: translate(-1px, -1px); }
+  83% { opacity: 0; transform: translate(-3px, -7px); }
+}
+
+.bodyFloat { transform: translateY(1px) rotate(-8deg); }
+.head { transform: rotate(-7deg); }
+.waveArm { transform: rotate(3deg); }
+.waveHand { transform: rotate(-6deg); }
+
+@media (prefers-reduced-motion: no-preference) {
+  .bodyFloat { animation: float 4.8s ease-in-out infinite; }
+  .head { animation: head 4.8s ease-in-out infinite; }
+  .waveArm { animation: raisedArm 4.8s ease-in-out infinite; }
+  .waveHand { animation: raisedHand 4.8s ease-in-out infinite; }
+  .paddleArm { animation: paddle 2.4s ease-in-out infinite; }
+  .paddleHand { animation: paddleHand 2.4s ease-in-out infinite; }
+  .legBack { animation: kickBack 2.4s ease-in-out infinite; }
+  .legFront { animation: kickFront 2.4s ease-in-out infinite; }
+  .ring { animation: ring 4.8s ease-in-out infinite; }
+  .eyes { animation: blink 4.8s linear infinite; }
+  .backWater { animation: water 4.8s linear infinite reverse; }
+  .frontWater { animation: water 4.8s linear infinite; }
+  .splash { animation: splash 2.4s ease-out infinite; }
+}
+.scene[data-paused="true"] * { animation-play-state: paused !important; }
+@media (prefers-reduced-motion: reduce) {
+  .level { transition: none; }
+}

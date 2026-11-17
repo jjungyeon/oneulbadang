@@ -1,0 +1,326 @@
+{
+  "source": "public/characters/waterplay_svg.png",
+  "sha256": "4d355cb50086f0fc4e8404390110ec98388fe156d0fb0f9b81ecaabc6d67c7ee",
+  "background": [
+    239,
+    247,
+    252
+  ],
+  "entries": [
+    {
+      "name": "female_cold",
+      "sourceBounds": {
+        "left": 83,
+        "top": 36,
+        "width": 122,
+        "height": 151
+      }
+    },
+    {
+      "name": "female_dive",
+      "sourceBounds": {
+        "left": 336,
+        "top": 22,
+        "width": 173,
+        "height": 118
+      }
+    },
+    {
+      "name": "female_float",
+      "sourceBounds": {
+        "left": 584,
+        "top": 23,
+        "width": 240,
+        "height": 138
+      }
+    },
+    {
+      "name": "female_lowtide",
+      "sourceBounds": {
+        "left": 894,
+        "top": 32,
+        "width": 171,
+        "height": 168
+      }
+    },
+    {
+      "name": "female_snorkel",
+      "sourceBounds": {
+        "left": 1139,
+        "top": 16,
+        "width": 248,
+        "height": 80
+      }
+    },
+    {
+      "name": "female_wind",
+      "sourceBounds": {
+        "left": 39,
+        "top": 254,
+        "width": 210,
+        "height": 172
+      }
+    },
+    {
+      "name": "male_cold",
+      "sourceBounds": {
+        "left": 350,
+        "top": 260,
+        "width": 129,
+        "height": 168
+      }
+    },
+    {
+      "name": "male_dive",
+      "sourceBounds": {
+        "left": 573,
+        "top": 247,
+        "width": 205,
+        "height": 149
+      }
+    },
+    {
+      "name": "male_float",
+      "sourceBounds": {
+        "left": 867,
+        "top": 251,
+        "width": 230,
+        "height": 138
+      }
+    },
+    {
+      "name": "male_lowtide",
+      "sourceBounds": {
+        "left": 1167,
+        "top": 263,
+        "width": 185,
+        "height": 166
+      }
+    },
+    {
+      "name": "male_snorkel",
+      "sourceBounds": {
+        "left": 16,
+        "top": 474,
+        "width": 229,
+        "height": 70
+      }
+    },
+    {
+      "name": "male_wind",
+      "sourceBounds": {
+        "left": 307,
+        "top": 483,
+        "width": 228,
+        "height": 175
+      }
+    },
+    {
+      "name": "cloud",
+      "sourceBounds": {
+        "left": 579,
+        "top": 485,
+        "width": 245,
+        "height": 94
+      }
+    },
+    {
+      "name": "float_green",
+      "sourceBounds": {
+        "left": 868,
+        "top": 480,
+        "width": 225,
+        "height": 124
+      }
+    },
+    {
+      "name": "float_pink",
+      "sourceBounds": {
+        "left": 1147,
+        "top": 479,
+        "width": 227,
+        "height": 124
+      }
+    },
+    {
+      "name": "float_yellow",
+      "sourceBounds": {
+        "left": 27,
+        "top": 711,
+        "width": 227,
+        "height": 123
+      }
+    },
+    {
+      "name": "foam_cluster",
+      "sourceBounds": {
+        "left": 296,
+        "top": 708,
+        "width": 243,
+        "height": 54
+      }
+    },
+    {
+      "name": "leaf",
+      "sourceBounds": {
+        "left": 584,
+        "top": 731,
+        "width": 148,
+        "height": 101
+      }
+    },
+    {
+      "name": "puddle",
+      "sourceBounds": {
+        "left": 866,
+        "top": 730,
+        "width": 224,
+        "height": 74
+      }
+    },
+    {
+      "name": "sand_ground",
+      "sourceBounds": {
+        "left": 1130,
+        "top": 712,
+        "width": 260,
+        "height": 74
+      }
+    },
+    {
+      "name": "sand_mini",
+      "sourceBounds": {
+        "left": 10,
+        "top": 947,
+        "width": 260,
+        "height": 120
+      }
+    },
+    {
+      "name": "sand_pebbles",
+      "sourceBounds": {
+        "left": 297,
+        "top": 956,
+        "width": 225,
+        "height": 70
+      }
+    },
+    {
+      "name": "seashell_pink",
+      "sourceBounds": {
+        "left": 620,
+        "top": 957,
+        "width": 161,
+        "height": 137
+      }
+    },
+    {
+      "name": "seashell_white",
+      "sourceBounds": {
+        "left": 900,
+        "top": 958,
+        "width": 161,
+        "height": 136
+      }
+    },
+    {
+      "name": "shiver_lines",
+      "sourceBounds": {
+        "left": 1147,
+        "top": 944,
+        "width": 174,
+        "height": 143
+      }
+    },
+    {
+      "name": "starfish",
+      "sourceBounds": {
+        "left": 53,
+        "top": 1176,
+        "width": 166,
+        "height": 160
+      }
+    },
+    {
+      "name": "surprise_marks",
+      "sourceBounds": {
+        "left": 355,
+        "top": 1171,
+        "width": 132,
+        "height": 83
+      }
+    },
+    {
+      "name": "water_current",
+      "sourceBounds": {
+        "left": 576,
+        "top": 1168,
+        "width": 242,
+        "height": 82
+      }
+    },
+    {
+      "name": "water_droplets",
+      "sourceBounds": {
+        "left": 870,
+        "top": 1167,
+        "width": 201,
+        "height": 139
+      }
+    },
+    {
+      "name": "water_ripple",
+      "sourceBounds": {
+        "left": 1143,
+        "top": 1169,
+        "width": 232,
+        "height": 79
+      }
+    },
+    {
+      "name": "water_splash",
+      "sourceBounds": {
+        "left": 16,
+        "top": 1395,
+        "width": 249,
+        "height": 115
+      }
+    },
+    {
+      "name": "wave_ocean",
+      "sourceBounds": {
+        "left": 290,
+        "top": 1402,
+        "width": 260,
+        "height": 75
+      }
+    },
+    {
+      "name": "wave_swell",
+      "sourceBounds": {
+        "left": 570,
+        "top": 1403,
+        "width": 260,
+        "height": 34
+      }
+    },
+    {
+      "name": "wave_white",
+      "sourceBounds": {
+        "left": 850,
+        "top": 1406,
+        "width": 260,
+        "height": 17
+      }
+    },
+    {
+      "name": "wind_gust",
+      "sourceBounds": {
+        "left": 1136,
+        "top": 1396,
+        "width": 239,
+        "height": 70
+      }
+    }
+  ]
+}

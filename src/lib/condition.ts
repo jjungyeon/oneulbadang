@@ -1,4 +1,5 @@
 import type { Place } from "@/types/place";
+import { waterplayAdvice } from "./waterplayAdvice";
 import type {
   Condition,
   Observation,
@@ -21,20 +22,20 @@ export const THRESHOLD = {
 export const STATUS_MESSAGE: Record<PlaceStatus, string> = {
   RAIN: "비가 오고 있어요",
   WINDY: "바람이 꽤 불어요",
-  COLD: "물에 들어가기엔 조금 추워요",
-  // "뜨겁다"로 쓰면 들어가지 말라는 신호로 읽힌다.
-  HOT: "따뜻한 바다예요",
-  LOW_TIDE: "물이 많이 빠졌어요",
-  SWIMMING: "지금 물놀이하기 좋아요",
+  COLD: "관측 수온이 20℃ 미만이에요",
+  HOT: "관측 수온이 28℃ 이상이에요",
+  LOW_TIDE: "물높이가 오늘 범위에서 낮은 편이에요",
+  SWIMMING: "관측된 바다 정보를 확인해 주세요",
 };
 
-/** 물때 문구. PRD 11번의 구간 이름을 그대로 쓴다. */
+/** Height and observed direction are separate; neither establishes bathing suitability. */
 export const TIDE_LABEL: Record<TideStatus, string> = {
-  LOW: "물이 많이 빠짐",
-  FALLING: "빠지는 중",
-  MID: "적당함",
-  RISING: "차오르는 중",
-  HIGH: "물이 많이 참",
+  LOW: "낮은 편",
+  FALLING: "물높이 하강 중",
+  MID: "중간 높이",
+  RISING: "물높이 상승 중",
+  HIGH: "높은 편",
+  UNKNOWN: "정보 없음",
 };
 
 /**
@@ -47,56 +48,68 @@ export function tideRatio(tide: TideData): number | undefined {
   if (
     currentLevel === undefined ||
     lowLevel === undefined ||
-    highLevel === undefined
+    highLevel === undefined ||
+    ![currentLevel, lowLevel, highLevel].every(Number.isFinite)
   ) {
     return undefined;
   }
 
   const span = highLevel - lowLevel;
   if (span <= 0) return undefined;
+  // Do not compare yesterday's last observation with today's predicted range.
+  if (tide.forecastDate) {
+    const stamp = Date.parse(tide.observedAt);
+    if (!Number.isFinite(stamp) || new Date(stamp + 9 * 3600000).toISOString().slice(0, 10).replaceAll("-", "") !== tide.forecastDate) return undefined;
+  }
 
   const ratio = (currentLevel - lowLevel) / span;
   return Math.min(1, Math.max(0, ratio));
 }
 
-/** ratio 0~20 / 20~40 / 40~60 / 60~80 / 80~100 % 를 다섯 구간으로 읽는다. */
+/** Low/high describe the daily range; rising/falling require an observed change. */
 export function toTideStatus(tide: TideData): TideStatus {
+  if (!Number.isFinite(tide.currentLevel)) return "UNKNOWN";
   const ratio = tideRatio(tide);
 
   // 조위 수치가 없으면 변화 방향만으로 대신 읽는다.
   if (ratio === undefined) {
     if (tide.trend === "RISING") return "RISING";
     if (tide.trend === "FALLING") return "FALLING";
-    return "MID";
+    return "UNKNOWN";
   }
 
   if (ratio < 0.2) return "LOW";
-  if (ratio < 0.4) return "FALLING";
-  if (ratio < 0.6) return "MID";
-  if (ratio < 0.8) return "RISING";
-  return "HIGH";
+  if (ratio >= 0.8) return "HIGH";
+  if (tide.trend === "RISING") return "RISING";
+  if (tide.trend === "FALLING") return "FALLING";
+  return "MID";
 }
 
 /**
  * FN-04 판단 우선순위.
- * 비 → 바람 → 추움 → 더움 → 간조 → 그 외 수영.
- * 수온 실측이 없는 관측소가 있으므로(PRD 12번) 수온이 없으면 그 두 단계는 건너뛴다.
+ * 비 → 바람 → 추움 → 더움 → 낮은 조위 → 기본 상태.
+ * Known individual conditions can be described with partial data. Missing data never implies suitability.
  */
 export function toStatus(
   observation: Observation,
   tideStatus: TideStatus,
-): PlaceStatus {
+): PlaceStatus | null {
   const { weather, water } = observation;
 
   if (weather.rain) return "RAIN";
-  if (weather.windSpeed >= THRESHOLD.windSpeed) return "WINDY";
+  if (Number.isFinite(weather.windSpeed) && weather.windSpeed! >= THRESHOLD.windSpeed) return "WINDY";
 
-  if (water.temperature !== undefined) {
+  if (water.temperature !== undefined && Number.isFinite(water.temperature)) {
     if (water.temperature < THRESHOLD.coldWater) return "COLD";
     if (water.temperature >= THRESHOLD.hotWater) return "HOT";
   }
 
   if (tideStatus === "LOW") return "LOW_TIDE";
+
+  if (weather.rain === undefined || weather.sky === undefined ||
+    weather.windSpeed === undefined || !Number.isFinite(weather.windSpeed) || weather.windSpeed < 0 ||
+    water.temperature === undefined || !Number.isFinite(water.temperature) ||
+    tideRatio(observation.tide) === undefined) return null;
 
   return "SWIMMING";
 }
@@ -108,11 +121,31 @@ export function evaluateCondition(
 ): Condition {
   const tideStatus = toTideStatus(observation.tide);
   const status = toStatus(observation, tideStatus);
+  const hasInformation = [observation.tide.currentLevel, observation.water.temperature,
+    observation.weather.sky, observation.weather.rain, observation.weather.windSpeed].some((value) => value !== undefined);
+  let message = status ? STATUS_MESSAGE[status] : hasInformation ? "일부 정보만 확인됐어요" : "현재 정보를 확인하지 못했어요";
+  if (status === "RAIN" && observation.weather.kind === "forecast") {
+    message = observation.weather.precipitationCode === 3 ? "눈 예보가 있어요" : "비 또는 눈 예보가 있어요";
+    if ([1, 4].includes(observation.weather.precipitationCode ?? -1)) message = "비 예보가 있어요";
+  }
+  if (status === "WINDY" && observation.weather.windKind === "forecast") message = "강한 바람이 예보됐어요";
+  if (status === null && Number.isFinite(observation.tide.currentLevel)) {
+    if (observation.tide.trend === "RISING") message = "물높이는 상승 중, 일부 정보는 확인 중이에요";
+    else if (observation.tide.trend === "FALLING") message = "물높이는 하강 중, 일부 정보는 확인 중이에요";
+  }
+  if (status === "SWIMMING") {
+    if (tideStatus === "HIGH") message = "물높이가 오늘 범위에서 높은 편이에요";
+    else if (observation.tide.trend === "RISING") message = "최근 관측에서 물높이가 올라갔어요";
+    else if (observation.tide.trend === "FALLING") message = "최근 관측에서 물높이가 내려갔어요";
+    else if (observation.tide.trend === "STABLE") message = "최근 두 관측의 물높이가 같아요";
+    else message = "물높이는 중간, 변화 방향은 확인 중이에요";
+  }
 
   return {
+    advice: waterplayAdvice(observation),
     place,
     status,
-    message: STATUS_MESSAGE[status],
+    message,
     tideStatus,
     isMock,
   };

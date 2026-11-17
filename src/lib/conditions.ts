@@ -1,39 +1,35 @@
-import { buildMockReadings } from "@/data/mock";
+import { unavailableReadings, retainRecentReading } from "./readings";
+import { PLACES } from "@/data/places";
 import type { PlaceReading } from "@/types/condition";
 
-/**
- * 화면이 쓰는 유일한 진입점.
- *
- * 실제 호출은 Route Handler가 대신한다. 여기서는 인증키를 알지 못한다.
- * 응답이 이상하거나 실패하면 예시 데이터로 돌아간다.
- */
-
 let cached: Promise<PlaceReading[]> | null = null;
-
+let expiresAt = 0;
+let previous: PlaceReading[] | null = null;
+const onFailure = () => previous ? previous.map((r) => retainRecentReading(r)) : unavailableReadings();
 async function load(): Promise<PlaceReading[]> {
   try {
-    const response = await fetch("/api/conditions");
-    if (!response.ok) return buildMockReadings();
-
-    const body = (await response.json()) as { readings?: PlaceReading[] };
-    if (!Array.isArray(body.readings) || body.readings.length === 0) {
-      return buildMockReadings();
-    }
+    const response = await fetch("/api/conditions", { cache: "no-store", signal: AbortSignal.timeout(25000) });
+    if (!response.ok) return onFailure();
+    const body = await response.json();
+    if (!Array.isArray(body.readings) || body.readings.length !== PLACES.length) return onFailure();
+    const valid = body.readings.every((r: PlaceReading, i: number) =>
+      r?.condition?.place?.id === PLACES[i].id && typeof r?.condition?.message === "string" &&
+      r.observation?.tide && r.observation?.water && r.observation?.weather && r.condition.isMock === false);
+    if (!valid) return onFailure();
+    previous = body.readings;
     return body.readings;
-  } catch {
-    return buildMockReadings();
-  }
+  } catch { return onFailure(); }
 }
-
-/** 지도가 마커 색을 정하려면 17곳이 다 필요하다. 한 번만 부르고 재사용한다. */
 export function getAllPlaceConditions(): Promise<PlaceReading[]> {
-  cached ??= load();
+  if (!cached || Date.now() >= expiresAt) {
+    expiresAt = Date.now() + 60000;
+    cached = load().then((readings) => {
+      if (readings.some((r) => r.refreshDelayed) || readings.every((r) => r.dataStatus === "unavailable")) expiresAt = Date.now() + 15000;
+      return readings;
+    });
+  }
   return cached;
 }
-
-export async function getPlaceConditions(
-  placeId: string,
-): Promise<PlaceReading | null> {
-  const readings = await getAllPlaceConditions();
-  return readings.find((r) => r.condition.place.id === placeId) ?? null;
+export async function getPlaceConditions(placeId: string): Promise<PlaceReading | null> {
+  return (await getAllPlaceConditions()).find((r) => r.condition.place.id === placeId) ?? null;
 }
